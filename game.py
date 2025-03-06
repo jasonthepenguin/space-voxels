@@ -30,7 +30,7 @@ for x in range(-5, 6):
 
 # Planet data: name, texture, size, orbit_radius, orbit_speed
 planet_data = [
-    ('Mercury', 'orange.png', 1, 12, 0.04),
+    ('Mercury', 'gray.png', 1, 12, 0.04),
     ('Venus', 'yellow.png', 2, 16, 0.015),
     ('Earth', 'mixed', 2, 22, 0.01),  # Special case for Earth
     ('Mars', 'red.png', 1.5, 28, 0.008),
@@ -52,6 +52,7 @@ textures = {
     'light_blue.png': load_texture('light_blue.png'),
     'jupiter.png': load_texture('jupiter.png'),  # Add the new texture
     'white.png': load_texture('white.png'),  # Add white texture for the moon
+    'gray.png': load_texture('gray.png'),  # Add gray texture for Mercury
 }
 
 # Create voxel planets
