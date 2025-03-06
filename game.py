@@ -9,6 +9,8 @@ window.borderless = False
 window.fullscreen = False
 window.exit_button.visible = True
 window.fps_counter.enabled = True
+window.size = (1280, 720)  # Set window to standard 1280x720 resolution
+window.center_on_screen()  # Center the window on the screen
 
 # Voxel-based Sun
 sun = Entity()
@@ -202,7 +204,7 @@ crosshair = Entity(
     parent=camera.ui,
     model='quad',
     color=color.rgba(255, 255, 255, 150),  # Slightly transparent
-    scale=0.0005  # Smaller crosshair (reduced from 0.001)
+    scale=0.01  # Increased size from 0.0005 to make it more visible
 )
 
 # Replace the default Sky() with a custom skybox using stars.png
