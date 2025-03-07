@@ -12,6 +12,12 @@ window.fps_counter.enabled = True
 window.size = (1280, 720)  # Set window to standard 1280x720 resolution
 window.center_on_screen()  # Center the window on the screen
 
+# Load sound effect for shooting
+# Create a pool of audio instances for rapid firing
+shoot_sound = Audio('shoot.mp3', loop=False, autoplay=False)
+shoot_sound_pool = [Audio('shoot.mp3', loop=False, autoplay=False) for _ in range(10)]
+shoot_sound_index = 0
+
 # Voxel-based Sun
 sun = Entity()
 # Use sun.png texture instead of solid color
@@ -152,6 +158,9 @@ player.cursor.enabled = False
 player.speed = 20
 player.position = (0, 0, -50)  # Start 50 units away from the origin, looking toward the solar system
 
+# Add a variable to track cursor lock state
+cursor_locked = True
+
 # Override the FirstPersonController's update method to implement noclip-style flying
 original_player_update = player.update
 
@@ -184,20 +193,133 @@ def update():
         planet.orbit_angle += planet.orbit_speed
         planet.x = np.cos(planet.orbit_angle) * planet.orbit_radius
         planet.z = np.sin(planet.orbit_angle) * planet.orbit_radius
+    
+    # Update any active lasers
+    for laser in lasers[:]:  # Use a copy of the list since we might modify it
+        laser.life -= time.dt
+        if laser.life <= 0:
+            destroy(laser)
+            lasers.remove(laser)
+            # We no longer need to destroy the target here as it's handled by create_explosion
+
+# Create a list to store active lasers
+lasers = []
 
 def input(key):
+    global cursor_locked
+    
     if key == 'escape':
         application.quit()
     elif key == 'left mouse down':
-        hit_info = raycast(
-            origin=camera.world_position,
-            direction=camera.forward,
-            distance=100,
-            ignore=(player,),
-            traverse_target=scene
-        )
-        if hit_info.hit:
-            destroy(hit_info.entity)
+        # Only allow shooting when cursor is locked
+        if cursor_locked:
+            hit_info = raycast(
+                origin=camera.world_position,
+                direction=camera.forward,
+                distance=100,
+                ignore=(player,),
+                traverse_target=scene
+            )
+            if hit_info.hit:
+                # Create a laser effect instead of immediately destroying the block
+                create_laser(camera.world_position, hit_info.entity)
+    elif key == 'p':
+        # Toggle cursor lock state
+        cursor_locked = not cursor_locked
+        
+        # Toggle mouse lock to allow using cursor outside the window
+        mouse.locked = cursor_locked
+        
+        # Toggle cursor visibility and control
+        player.cursor.visible = not cursor_locked
+        player.cursor.enabled = not cursor_locked
+        
+        # Toggle mouse control of camera
+        player.mouse_sensitivity = Vec2(40, 40) if cursor_locked else Vec2(0, 0)
+        
+        # Show/hide crosshair based on cursor lock state
+        crosshair.visible = cursor_locked
+
+def create_laser(start_pos, target_entity):
+    # Use the next audio instance from the pool for faster playback
+    global shoot_sound_index
+    shoot_sound_pool[shoot_sound_index].play(start=1.1)
+    shoot_sound_index = (shoot_sound_index + 1) % len(shoot_sound_pool)
+    
+    # Adjust the start position to be slightly forward, below, and to the left of the camera
+    adjusted_start_pos = start_pos + (camera.forward * 1.2) + (Vec3(0, -0.5, 0)) + (camera.left * 0.5)
+    
+    # Calculate the end position (the target)
+    end_pos = target_entity.world_position
+    
+    # Calculate the direction and distance
+    direction = (end_pos - adjusted_start_pos).normalized()
+    distance = (end_pos - adjusted_start_pos).length()
+    
+    # Create the laser entity
+    laser = Entity(
+        model='cube',
+        color=color.rgba(255, 0, 0, 200),  # Brighter red with some transparency
+        scale=(0.3, 0.3, distance),  # Slightly thicker laser beam for better visibility
+        position=adjusted_start_pos + (direction * distance/2),  # Position in the middle
+        billboard=False,
+        life=0.3,  # Laser will exist for 0.3 seconds
+        target=target_entity  # Store the target to destroy it when the laser expires
+    )
+    
+    # Orient the laser to point from start to end
+    laser.look_at(end_pos)
+    
+    # Create explosion effect (destroy multiple blocks)
+    create_explosion(target_entity, radius=1.5)  # Radius determines explosion size
+    
+    # Add a light effect at the impact point
+    impact_flash = Entity(
+        model='sphere',
+        color=color.rgba(255, 50, 50, 200),  # Brighter red flash
+        scale=1.2,  # Larger impact flash for bigger explosion
+        position=end_pos,
+        life=0.2  # Flash will exist for 0.2 seconds
+    )
+    
+    # Add to the list of active lasers
+    lasers.append(laser)
+    
+    # Add a destroy function for the impact flash
+    def destroy_flash():
+        destroy(impact_flash)
+    
+    # Schedule the destruction of the impact flash
+    invoke(destroy_flash, delay=0.2)
+
+def create_explosion(target_entity, radius=1.5):
+    # Get the parent of the target (the planet or sun)
+    parent_entity = target_entity.parent
+    
+    # Get the position of the target in local space
+    target_pos = target_entity.position
+    
+    # Initialize target_destroyed flag and list of blocks within the explosion radius
+    target_destroyed = False
+    blocks_to_destroy = []
+    
+    # Check all children of the parent entity (all blocks in the planet/sun)
+    for entity in parent_entity.children:
+        # Calculate distance between this entity and the target
+        distance = (entity.position - target_pos).length()
+        
+        # If within explosion radius, add to destruction list
+        if distance <= radius:
+            blocks_to_destroy.append(entity)
+            if entity == target_entity:
+                target_destroyed = True
+    
+    # Destroy all blocks in the explosion radius
+    for block in blocks_to_destroy:
+        destroy(block)
+    
+    if not target_destroyed:
+        destroy(target_entity)
 
 # Crosshair for better aiming
 crosshair = Entity(
