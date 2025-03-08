@@ -12,6 +12,11 @@ window.fps_counter.enabled = True
 window.size = (1280, 720)  # Set window to standard 1280x720 resolution
 window.center_on_screen()  # Center the window on the screen
 
+# Add auto-fire variables
+left_mouse_held = False
+time_since_last_shot = 0
+auto_fire_delay = 0.3  # Delay between shots in seconds (adjust as needed)
+
 # Load sound effect for shooting - use a more efficient audio pooling approach
 shoot_sound = Audio('shoot.mp3', loop=False, autoplay=False)
 shoot_sound_pool = [Audio('shoot.mp3', loop=False, autoplay=False) for _ in range(10)]
@@ -296,9 +301,24 @@ def update():
 
     # Crosshair visibility logic (no change needed)
     crosshair.visible = cursor_locked
+    
+    # Auto-fire logic when holding left mouse button
+    global left_mouse_held, time_since_last_shot
+    if left_mouse_held and cursor_locked:
+        time_since_last_shot += time.dt
+        if time_since_last_shot >= auto_fire_delay:
+            time_since_last_shot = 0
+            if mouse.hovered_entity and hasattr(mouse.hovered_entity, 'parent'):
+                parent_entity = mouse.hovered_entity.parent
+                # Include moon explicitly
+                if parent_entity in planets or parent_entity == sun or parent_entity.name == 'Moon':
+                    create_laser(camera.world_position, mouse.hovered_entity)
+            else:
+                # Shoot in the direction the camera is facing even if not aiming at a planet
+                create_laser(camera.world_position, None)
 
 def input(key):
-    global cursor_locked
+    global cursor_locked, left_mouse_held, time_since_last_shot
     
     # Toggle cursor lock with escape key
     if key == 'escape':
@@ -313,12 +333,23 @@ def input(key):
             mouse.locked = False
             mouse.visible = True
     
-    # Shoot a laser when left mouse button is clicked
-    if key == 'left mouse down' and cursor_locked:
-        if mouse.hovered_entity and hasattr(mouse.hovered_entity, 'parent'):
-            # Only shoot if we're hovering over a block that belongs to a planet
-            if mouse.hovered_entity.parent in planets or mouse.hovered_entity.parent == sun:
-                create_laser(camera.world_position, mouse.hovered_entity)
+    # Track mouse button state for auto-firing
+    if key == 'left mouse down':
+        left_mouse_held = True
+        # Fire immediately on first click
+        if cursor_locked:
+            if mouse.hovered_entity and hasattr(mouse.hovered_entity, 'parent'):
+                parent_entity = mouse.hovered_entity.parent
+                if parent_entity in planets or parent_entity == sun or parent_entity.name == 'Moon':
+                    create_laser(camera.world_position, mouse.hovered_entity)
+                    time_since_last_shot = 0
+            else:
+                # Shoot in the direction the camera is facing even if not aiming at a planet
+                create_laser(camera.world_position, None)
+                time_since_last_shot = 0
+    
+    if key == 'left mouse up':
+        left_mouse_held = False
 
 # Optimized laser creation
 def create_laser(start_pos, target_entity):
@@ -330,8 +361,14 @@ def create_laser(start_pos, target_entity):
 
     # Adjust the laser start position
     adjusted_start_pos = start_pos + (camera.forward * 1.2) + Vec3(0, -0.5, 0) + (camera.left * 0.5)
-    end_pos = target_entity.world_position
-
+    
+    if target_entity:
+        # Shoot at the target entity
+        end_pos = target_entity.world_position
+    else:
+        # Shoot forward in the direction the camera is facing (100 units away)
+        end_pos = adjusted_start_pos + camera.forward * 100
+    
     direction = (end_pos - adjusted_start_pos).normalized()
     distance = (end_pos - adjusted_start_pos).length()
 
@@ -345,12 +382,12 @@ def create_laser(start_pos, target_entity):
 
     lasers.append(laser)
 
-    # Create explosion flash effect at impact
-    impact_flash = get_flash_from_pool()
-    impact_flash.position = end_pos
-
-    # Schedule disabling of flash effect
-    invoke(lambda: setattr(impact_flash, 'enabled', False), delay=0.2)
+    # Create explosion flash effect at impact only if hitting a target
+    if target_entity:
+        impact_flash = get_flash_from_pool()
+        impact_flash.position = end_pos
+        # Schedule disabling of flash effect
+        invoke(lambda: setattr(impact_flash, 'enabled', False), delay=0.2)
 
 # Optimized explosion creation using spatial dictionary
 def create_explosion(target_entity, radius=1.5):
