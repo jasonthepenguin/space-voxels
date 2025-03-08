@@ -12,16 +12,28 @@ window.fps_counter.enabled = True
 window.size = (1280, 720)  # Set window to standard 1280x720 resolution
 window.center_on_screen()  # Center the window on the screen
 
-# Load sound effect for shooting
-# Create a pool of audio instances for rapid firing
+# Load sound effect for shooting - use a more efficient audio pooling approach
 shoot_sound = Audio('shoot.mp3', loop=False, autoplay=False)
 shoot_sound_pool = [Audio('shoot.mp3', loop=False, autoplay=False) for _ in range(10)]
 shoot_sound_index = 0
+
+# Object pools for frequently created objects
+# Laser pool
+MAX_LASERS = 20
+laser_pool = []
+lasers = []  # Active lasers list
+
+# Flash effect pool
+MAX_FLASHES = 10
+flash_pool = []
 
 # Voxel-based Sun
 sun = Entity()
 # Use sun.png texture instead of solid color
 sun_texture = load_texture('sun.png')
+
+# Dictionary to store sun blocks by position
+sun.block_dict = {}
 
 for x in range(-5, 6):
     for y in range(-5, 6):
@@ -35,6 +47,8 @@ for x in range(-5, 6):
                     texture=sun_texture,
                     parent=sun
                 )
+                # Store the voxel in the dictionary with its position as the key
+                sun.block_dict[(x, y, z)] = voxel
 
 # Planet data: name, texture, size, orbit_radius, orbit_speed
 planet_data = [
@@ -63,12 +77,15 @@ textures = {
     'gray.png': load_texture('gray.png'),  # Add gray texture for Mercury
 }
 
-# Create voxel planets
+# Create voxel planets with optimized structure
 for name, texture_name, size, orbit_radius, orbit_speed in planet_data:
     planet_center = Entity(name=name)
     planet_center.orbit_radius = orbit_radius
     planet_center.orbit_speed = orbit_speed
     planet_center.orbit_angle = np.random.rand() * 360
+    
+    # Create spatial dictionary for each planet
+    planet_center.block_dict = {}
     
     # Calculate voxel range based on planet size
     voxel_range = int(size + 1)
@@ -79,6 +96,14 @@ for name, texture_name, size, orbit_radius, orbit_speed in planet_data:
         for y in range(-voxel_range, voxel_range + 1):
             for z in range(-voxel_range, voxel_range + 1):
                 if x**2 + y**2 + z**2 <= max_distance:
+                    # Determine if this is an outer block (exposed to space)
+                    is_outer_block = False
+                    for dx, dy, dz in [(1,0,0), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]:
+                        nx, ny, nz = x+dx, y+dy, z+dz
+                        if nx**2 + ny**2 + nz**2 > max_distance:
+                            is_outer_block = True
+                            break
+                    
                     # Special case for Earth - mix of water and grass
                     if texture_name == 'mixed':
                         # Earth special case
@@ -116,15 +141,20 @@ for name, texture_name, size, orbit_radius, orbit_speed in planet_data:
                             planet_texture = textures['white.png']  # Some white clouds
                     else:
                         planet_texture = textures[texture_name]
-                        
+                    
+                    # Only add collider to outer blocks for optimization
                     voxel = Entity(
                         model='cube',
-                        collider='box',
+                        collider='box' if is_outer_block else None,
                         position=(x, y, z),
                         scale=1,
                         texture=planet_texture,
                         parent=planet_center
                     )
+                    
+                    # Store the voxel in the planet's block dictionary
+                    planet_center.block_dict[(x, y, z)] = voxel
+    
     planets.append(planet_center)
 
 # Add rings to Saturn
@@ -133,6 +163,10 @@ for planet in planets:
         # Create Saturn's rings
         ring_radius = 6  # Adjust based on Saturn's size
         ring_thickness = 0.5
+        
+        # Create a dictionary to store the ring blocks
+        if not hasattr(planet, 'ring_dict'):
+            planet.ring_dict = {}
         
         # Create a flat disc of voxels for the rings
         for x in range(-ring_radius, ring_radius + 1):
@@ -149,6 +183,8 @@ for planet in planets:
                         texture=textures['orange.png'],  # Use a different texture for the rings
                         parent=planet
                     )
+                    # Store the ring voxel in the dictionary
+                    planet.ring_dict[(x, 0, z)] = ring_voxel
 
 # Player Controller
 player = FirstPersonController()
@@ -187,8 +223,63 @@ player.update = noclip_update
 DirectionalLight(parent=sun, rotation=(45, -45, 45), shadows=True)
 AmbientLight(color=color.rgba(100, 100, 100, 0.3))
 
-# Update orbit positions
+# Get laser from pool
+def get_laser_from_pool():
+    for laser in laser_pool:
+        if not laser.enabled:
+            laser.enabled = True
+            return laser
+    
+    # Create new laser if pool is not full
+    if len(laser_pool) < MAX_LASERS:
+        new_laser = Entity(
+            model='cube',
+            color=color.rgba(255, 0, 0, 200),
+            scale=(0.3, 0.3, 1),
+            enabled=False
+        )
+        laser_pool.append(new_laser)
+        return new_laser
+    
+    # Recycle oldest laser if pool is full
+    for i, laser in enumerate(laser_pool):
+        if not laser in lasers:
+            return laser
+    
+    # If all are in use, create a temporary one
+    return Entity(
+        model='cube',
+        color=color.rgba(255, 0, 0, 200),
+        scale=(0.3, 0.3, 1)
+    )
+
+# Get flash from pool
+def get_flash_from_pool():
+    for flash in flash_pool:
+        if not flash.enabled:
+            flash.enabled = True
+            return flash
+    
+    # Create new flash if pool is not full
+    if len(flash_pool) < MAX_FLASHES:
+        new_flash = Entity(
+            model='sphere',
+            color=color.rgba(255, 50, 50, 200),
+            scale=1.2,
+            enabled=False
+        )
+        flash_pool.append(new_flash)
+        return new_flash
+    
+    # Recycle oldest flash
+    oldest_flash = flash_pool[0]
+    flash_pool.remove(oldest_flash)
+    flash_pool.append(oldest_flash)
+    return oldest_flash
+
+# Update orbit positions - optimized
 def update():
+    # Update planet positions
     for planet in planets:
         planet.orbit_angle += planet.orbit_speed
         planet.x = np.cos(planet.orbit_angle) * planet.orbit_radius
@@ -198,48 +289,48 @@ def update():
     for laser in lasers[:]:  # Use a copy of the list since we might modify it
         laser.life -= time.dt
         if laser.life <= 0:
-            destroy(laser)
-            lasers.remove(laser)
-            # We no longer need to destroy the target here as it's handled by create_explosion
-
-# Create a list to store active lasers
-lasers = []
+            # Instead of destroying the laser, just disable it
+            laser.enabled = False
+            if laser in lasers:
+                lasers.remove(laser)
+            
+            # Damage the target
+            if hasattr(laser, 'target') and laser.target:
+                create_explosion(laser.target)
+    
+    # Update moon if it exists
+    if 'moon' in globals():
+        moon.rotation_angle += moon.rotation_speed
+        moon.x = np.cos(moon.rotation_angle) * 5  # 5 units away from Earth
+        moon.z = np.sin(moon.rotation_angle) * 5
+    
+    # Show/hide crosshair based on cursor lock state
+    crosshair.visible = cursor_locked
 
 def input(key):
     global cursor_locked
     
+    # Toggle cursor lock with escape key
     if key == 'escape':
-        application.quit()
-    elif key == 'left mouse down':
-        # Only allow shooting when cursor is locked
-        if cursor_locked:
-            hit_info = raycast(
-                origin=camera.world_position,
-                direction=camera.forward,
-                distance=100,
-                ignore=(player,),
-                traverse_target=scene
-            )
-            if hit_info.hit:
-                # Create a laser effect instead of immediately destroying the block
-                create_laser(camera.world_position, hit_info.entity)
-    elif key == 'p':
-        # Toggle cursor lock state
+        application.quit()  # Restore original behavior to quit on Escape
+    elif key == 'p':  # Use 'p' key to toggle cursor lock
         cursor_locked = not cursor_locked
         
-        # Toggle mouse lock to allow using cursor outside the window
-        mouse.locked = cursor_locked
-        
-        # Toggle cursor visibility and control
-        player.cursor.visible = not cursor_locked
-        player.cursor.enabled = not cursor_locked
-        
-        # Toggle mouse control of camera
-        player.mouse_sensitivity = Vec2(40, 40) if cursor_locked else Vec2(0, 0)
-        
-        # Show/hide crosshair based on cursor lock state
-        crosshair.visible = cursor_locked
+        if cursor_locked:
+            mouse.locked = True
+            mouse.visible = False
+        else:
+            mouse.locked = False
+            mouse.visible = True
+    
+    # Shoot a laser when left mouse button is clicked
+    if key == 'left mouse down' and cursor_locked:
+        if mouse.hovered_entity and hasattr(mouse.hovered_entity, 'parent'):
+            # Only shoot if we're hovering over a block that belongs to a planet
+            if mouse.hovered_entity.parent in planets or mouse.hovered_entity.parent == sun:
+                create_laser(camera.world_position, mouse.hovered_entity)
 
+# Optimized laser creation
 def create_laser(start_pos, target_entity):
     # Use the next audio instance from the pool for faster playback
     global shoot_sound_index
@@ -256,42 +347,31 @@ def create_laser(start_pos, target_entity):
     direction = (end_pos - adjusted_start_pos).normalized()
     distance = (end_pos - adjusted_start_pos).length()
     
-    # Create the laser entity
-    laser = Entity(
-        model='cube',
-        color=color.rgba(255, 0, 0, 200),  # Brighter red with some transparency
-        scale=(0.3, 0.3, distance),  # Slightly thicker laser beam for better visibility
-        position=adjusted_start_pos + (direction * distance/2),  # Position in the middle
-        billboard=False,
-        life=0.3,  # Laser will exist for 0.3 seconds
-        target=target_entity  # Store the target to destroy it when the laser expires
-    )
+    # Get a laser from the pool
+    laser = get_laser_from_pool()
     
-    # Orient the laser to point from start to end
+    # Configure the laser
+    laser.scale = (0.3, 0.3, distance)
+    laser.position = adjusted_start_pos + (direction * distance/2)
     laser.look_at(end_pos)
-    
-    # Create explosion effect (destroy multiple blocks)
-    create_explosion(target_entity, radius=1.5)  # Radius determines explosion size
-    
-    # Add a light effect at the impact point
-    impact_flash = Entity(
-        model='sphere',
-        color=color.rgba(255, 50, 50, 200),  # Brighter red flash
-        scale=1.2,  # Larger impact flash for bigger explosion
-        position=end_pos,
-        life=0.2  # Flash will exist for 0.2 seconds
-    )
+    laser.life = 0.3
+    laser.target = target_entity
     
     # Add to the list of active lasers
     lasers.append(laser)
     
-    # Add a destroy function for the impact flash
-    def destroy_flash():
-        destroy(impact_flash)
+    # Create explosion effect at the impact point
+    # Get a flash from the pool
+    impact_flash = get_flash_from_pool()
+    impact_flash.position = end_pos
     
-    # Schedule the destruction of the impact flash
-    invoke(destroy_flash, delay=0.2)
+    # Schedule the disabling of the impact flash
+    def disable_flash():
+        impact_flash.enabled = False
+    
+    invoke(disable_flash, delay=0.2)
 
+# Optimized explosion creation using spatial dictionary
 def create_explosion(target_entity, radius=1.5):
     # Get the parent of the target (the planet or sun)
     parent_entity = target_entity.parent
@@ -300,26 +380,71 @@ def create_explosion(target_entity, radius=1.5):
     target_pos = target_entity.position
     
     # Initialize target_destroyed flag and list of blocks within the explosion radius
-    target_destroyed = False
     blocks_to_destroy = []
     
-    # Check all children of the parent entity (all blocks in the planet/sun)
-    for entity in parent_entity.children:
-        # Calculate distance between this entity and the target
-        distance = (entity.position - target_pos).length()
-        
-        # If within explosion radius, add to destruction list
-        if distance <= radius:
-            blocks_to_destroy.append(entity)
-            if entity == target_entity:
-                target_destroyed = True
+    # Check if the parent has a block dictionary
+    if hasattr(parent_entity, 'block_dict'):
+        # Only check blocks that could be within the radius
+        for x in range(int(target_pos.x-radius), int(target_pos.x+radius+1)):
+            for y in range(int(target_pos.y-radius), int(target_pos.y+radius+1)):
+                for z in range(int(target_pos.z-radius), int(target_pos.z+radius+1)):
+                    if (x, y, z) in parent_entity.block_dict:
+                        block = parent_entity.block_dict[(x, y, z)]
+                        distance = (block.position - target_pos).length()
+                        if distance <= radius:
+                            blocks_to_destroy.append(block)
+                            # Remove from the dictionary
+                            del parent_entity.block_dict[(x, y, z)]
+    
+    # Check if the parent has a ring dictionary (for Saturn's rings)
+    if hasattr(parent_entity, 'ring_dict'):
+        # Only check blocks that could be within the radius
+        for x in range(int(target_pos.x-radius), int(target_pos.x+radius+1)):
+            for y in range(int(target_pos.y-radius), int(target_pos.y+radius+1)):
+                for z in range(int(target_pos.z-radius), int(target_pos.z+radius+1)):
+                    if (x, y, z) in parent_entity.ring_dict:
+                        block = parent_entity.ring_dict[(x, y, z)]
+                        distance = (block.position - target_pos).length()
+                        if distance <= radius:
+                            blocks_to_destroy.append(block)
+                            # Remove from the dictionary
+                            del parent_entity.ring_dict[(x, y, z)]
+    else:
+        # Fallback for entities without a block dictionary
+        for entity in parent_entity.children:
+            distance = (entity.position - target_pos).length()
+            if distance <= radius:
+                blocks_to_destroy.append(entity)
+    
+    # Update colliders for newly exposed blocks
+    if hasattr(parent_entity, 'block_dict'):
+        for block in blocks_to_destroy:
+            x, y, z = int(block.x), int(block.y), int(block.z)
+            # Check all 6 neighboring positions
+            for dx, dy, dz in [(1,0,0), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]:
+                neighbor_pos = (x+dx, y+dy, z+dz)
+                if neighbor_pos in parent_entity.block_dict:
+                    neighbor = parent_entity.block_dict[neighbor_pos]
+                    # If this block doesn't have a collider yet, add one
+                    if not neighbor.collider:
+                        neighbor.collider = BoxCollider(neighbor)
+    
+    # Also update colliders for newly exposed ring blocks
+    if hasattr(parent_entity, 'ring_dict'):
+        for block in blocks_to_destroy:
+            x, y, z = int(block.x), int(block.y), int(block.z)
+            # Check all 6 neighboring positions
+            for dx, dy, dz in [(1,0,0), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]:
+                neighbor_pos = (x+dx, y+dy, z+dz)
+                if neighbor_pos in parent_entity.ring_dict:
+                    neighbor = parent_entity.ring_dict[neighbor_pos]
+                    # If this block doesn't have a collider yet, add one
+                    if not neighbor.collider:
+                        neighbor.collider = BoxCollider(neighbor)
     
     # Destroy all blocks in the explosion radius
     for block in blocks_to_destroy:
         destroy(block)
-    
-    if not target_destroyed:
-        destroy(target_entity)
 
 # Crosshair for better aiming
 crosshair = Entity(
@@ -347,6 +472,9 @@ if earth:
     moon.rotation_speed = 0.02  # Moon's rotation around Earth
     moon.rotation_angle = 0  # Starting angle
     
+    # Create spatial dictionary for moon
+    moon.block_dict = {}
+    
     # Create voxel-based Moon
     moon_size = 0.7  # Moon is smaller than Earth
     moon_voxel_range = int(moon_size + 1)
@@ -357,31 +485,27 @@ if earth:
         for y in range(-moon_voxel_range, moon_voxel_range + 1):
             for z in range(-moon_voxel_range, moon_voxel_range + 1):
                 if x**2 + y**2 + z**2 <= moon_max_distance:
+                    # Determine if this is an outer block
+                    is_outer_block = False
+                    for dx, dy, dz in [(1,0,0), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]:
+                        nx, ny, nz = x+dx, y+dy, z+dz
+                        if nx**2 + ny**2 + nz**2 > moon_max_distance:
+                            is_outer_block = True
+                            break
+                    
                     # Use white.png for the moon texture
                     moon_texture = textures['white.png']
                     
                     moon_voxel = Entity(
                         model='cube',
-                        collider='box',
+                        collider='box' if is_outer_block else None,
                         position=(x, y, z),
                         scale=1,
                         texture=moon_texture,
                         parent=moon
                     )
-    
-    # Update the update function to rotate the moon
-    original_update = update
-    
-    def new_update():
-        original_update()  # Call the original update function
-        
-        # Update moon position
-        if hasattr(moon, 'rotation_angle'):
-            moon.rotation_angle += moon.rotation_speed
-            moon.x = np.cos(moon.rotation_angle) * 5  # 5 units away from Earth
-            moon.z = np.sin(moon.rotation_angle) * 5
-    
-    # Replace the update function
-    update = new_update
+                    
+                    # Store in the moon's block dictionary
+                    moon.block_dict[(x, y, z)] = moon_voxel
 
 app.run()
