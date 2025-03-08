@@ -1,0 +1,5 @@
+# Ignore MP3 audio files
+*.mp3
+
+# Ignore PNG image files
+*.png
