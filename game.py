@@ -225,33 +225,27 @@ AmbientLight(color=color.rgba(100, 100, 100, 0.3))
 
 # Get laser from pool
 def get_laser_from_pool():
+    # Try to reuse an inactive laser
     for laser in laser_pool:
         if not laser.enabled:
             laser.enabled = True
             return laser
-    
-    # Create new laser if pool is not full
+
+    # If the pool isn't full yet, create a new laser
     if len(laser_pool) < MAX_LASERS:
         new_laser = Entity(
             model='cube',
             color=color.rgba(255, 0, 0, 200),
             scale=(0.3, 0.3, 1),
-            enabled=False
+            enabled=True
         )
         laser_pool.append(new_laser)
         return new_laser
-    
-    # Recycle oldest laser if pool is full
-    for i, laser in enumerate(laser_pool):
-        if not laser in lasers:
-            return laser
-    
-    # If all are in use, create a temporary one
-    return Entity(
-        model='cube',
-        color=color.rgba(255, 0, 0, 200),
-        scale=(0.3, 0.3, 1)
-    )
+
+    # If pool is full, recycle the oldest active laser
+    oldest_laser = lasers.pop(0)
+    oldest_laser.enabled = True
+    return oldest_laser
 
 # Get flash from pool
 def get_flash_from_pool():
@@ -279,32 +273,28 @@ def get_flash_from_pool():
 
 # Update orbit positions - optimized
 def update():
-    # Update planet positions
+    # Update planet positions (no change needed here)
     for planet in planets:
         planet.orbit_angle += planet.orbit_speed
         planet.x = np.cos(planet.orbit_angle) * planet.orbit_radius
         planet.z = np.sin(planet.orbit_angle) * planet.orbit_radius
-    
-    # Update any active lasers
-    for laser in lasers[:]:  # Use a copy of the list since we might modify it
+
+    # Updated laser recycling logic
+    for laser in lasers[:]:  # Iterate safely over a copy
         laser.life -= time.dt
         if laser.life <= 0:
-            # Instead of destroying the laser, just disable it
             laser.enabled = False
-            if laser in lasers:
-                lasers.remove(laser)
-            
-            # Damage the target
+            lasers.remove(laser)
             if hasattr(laser, 'target') and laser.target:
                 create_explosion(laser.target)
-    
-    # Update moon if it exists
+
+    # Moon update logic (no change needed)
     if 'moon' in globals():
         moon.rotation_angle += moon.rotation_speed
-        moon.x = np.cos(moon.rotation_angle) * 5  # 5 units away from Earth
+        moon.x = np.cos(moon.rotation_angle) * 5
         moon.z = np.sin(moon.rotation_angle) * 5
-    
-    # Show/hide crosshair based on cursor lock state
+
+    # Crosshair visibility logic (no change needed)
     crosshair.visible = cursor_locked
 
 def input(key):
@@ -332,44 +322,35 @@ def input(key):
 
 # Optimized laser creation
 def create_laser(start_pos, target_entity):
-    # Use the next audio instance from the pool for faster playback
     global shoot_sound_index
+
+    # Play shooting sound using audio pooling
     shoot_sound_pool[shoot_sound_index].play(start=1.1)
     shoot_sound_index = (shoot_sound_index + 1) % len(shoot_sound_pool)
-    
-    # Adjust the start position to be slightly forward, below, and to the left of the camera
-    adjusted_start_pos = start_pos + (camera.forward * 1.2) + (Vec3(0, -0.5, 0)) + (camera.left * 0.5)
-    
-    # Calculate the end position (the target)
+
+    # Adjust the laser start position
+    adjusted_start_pos = start_pos + (camera.forward * 1.2) + Vec3(0, -0.5, 0) + (camera.left * 0.5)
     end_pos = target_entity.world_position
-    
-    # Calculate the direction and distance
+
     direction = (end_pos - adjusted_start_pos).normalized()
     distance = (end_pos - adjusted_start_pos).length()
-    
-    # Get a laser from the pool
+
+    # Get a laser from the improved pool
     laser = get_laser_from_pool()
-    
-    # Configure the laser
     laser.scale = (0.3, 0.3, distance)
-    laser.position = adjusted_start_pos + (direction * distance/2)
+    laser.position = adjusted_start_pos + (direction * distance / 2)
     laser.look_at(end_pos)
     laser.life = 0.3
     laser.target = target_entity
-    
-    # Add to the list of active lasers
+
     lasers.append(laser)
-    
-    # Create explosion effect at the impact point
-    # Get a flash from the pool
+
+    # Create explosion flash effect at impact
     impact_flash = get_flash_from_pool()
     impact_flash.position = end_pos
-    
-    # Schedule the disabling of the impact flash
-    def disable_flash():
-        impact_flash.enabled = False
-    
-    invoke(disable_flash, delay=0.2)
+
+    # Schedule disabling of flash effect
+    invoke(lambda: setattr(impact_flash, 'enabled', False), delay=0.2)
 
 # Optimized explosion creation using spatial dictionary
 def create_explosion(target_entity, radius=1.5):
