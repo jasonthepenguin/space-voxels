@@ -3,3 +3,6 @@
 
 # Ignore PNG image files
 *.png
+
+# ignore python env folder
+env/

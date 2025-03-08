@@ -3,6 +3,16 @@ from ursina.prefabs.first_person_controller import FirstPersonController
 import numpy as np
 import random
 
+
+from screeninfo import get_monitors
+
+
+
+window_width = 1280
+window_height = 600
+
+
+
 app = Ursina()
 window.title = 'Voxel Solar System Explorer'
 window.borderless = False
@@ -10,7 +20,7 @@ window.fullscreen = False
 window.exit_button.visible = True
 window.fps_counter.enabled = True
 window.size = (1280, 720)  # Set window to standard 1280x720 resolution
-window.center_on_screen()  # Center the window on the screen
+
 
 # Add auto-fire variables
 left_mouse_held = False
