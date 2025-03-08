@@ -11,9 +11,21 @@ from screeninfo import get_monitors
 window_width = 1280
 window_height = 600
 
+# Get primary monitor resolution 
+monitor = get_monitors()[0]
+screen_width = monitor.width
+screen_height = monitor.height
+
+# Calculate position to center the window
+position_x = (screen_width - window_height) // 2 
+position_y = (screen_height -  window_height) // 2
+
+app = Ursina(position=(position_x, position_y), size=(window_width, window_height))
+
+#app = Ursina()
 
 
-app = Ursina()
+
 window.title = 'Voxel Solar System Explorer'
 window.borderless = False
 window.fullscreen = False
