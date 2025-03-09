@@ -793,34 +793,6 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Function to update planet labels position
-function updatePlanetLabels() {
-    planets.forEach(planet => {
-        if (planet.label) {
-            // Get screen position of planet
-            const vector = new THREE.Vector3();
-            const widthHalf = window.innerWidth / 2;
-            const heightHalf = window.innerHeight / 2;
-            
-            vector.setFromMatrixPosition(planet.matrixWorld);
-            vector.project(camera);
-            
-            // Convert to screen coordinates
-            const x = (vector.x * widthHalf) + widthHalf;
-            const y = -(vector.y * heightHalf) + heightHalf;
-            
-            // Check if planet is in front of the camera (z < 1)
-            if (vector.z < 1) {
-                planet.label.style.display = 'block';
-                planet.label.style.left = x + 'px';
-                planet.label.style.top = y + 'px';
-            } else {
-                planet.label.style.display = 'none';
-            }
-        }
-    });
-}
-
 // Add temporary direction helper function
 function addDirectionHelper() {
     // Create text to help find planets
