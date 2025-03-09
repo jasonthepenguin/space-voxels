@@ -17,6 +17,8 @@ let leftMouseHeld = false;
 let timeSinceLastShot = 0;
 const AUTO_FIRE_DELAY = 0.3;
 let cursorLocked = false;
+let player; // Player object
+let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
 
 // Textures
 const textures = {};
@@ -64,8 +66,12 @@ function init() {
 
     // Create camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 30, 70); // Move higher and further out to see more planets at once
-    camera.lookAt(0, 0, 0); // Look at the center of the solar system
+    
+    // Create player
+    createPlayer();
+    
+    // Position camera behind player
+    updateCameraPosition();
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -81,9 +87,6 @@ function init() {
 
     // Setup lighting
     setupLighting();
-
-    // Create first-person controls
-    setupControls();
 
     // Create UI elements (crosshair)
     createUI();
@@ -103,12 +106,17 @@ function init() {
 
     // Setup event listeners
     setupEventListeners();
+    
+    // Setup controls
+    setupControls();
 
     // Add an initial direction helper
     addDirectionHelper();
 
     // Start animation loop
     animate();
+    
+    console.log("Game initialized successfully");
 }
 
 function loadStarsTexture() {
@@ -162,16 +170,32 @@ function setupLighting() {
 }
 
 function setupControls() {
-    controls = new PointerLockControls(camera, document.body);
+    // We're not using PointerLockControls anymore
+    // Instead, we'll handle player movement and rotation manually
     
     // Add event listener for locking/unlocking the pointer
     document.addEventListener('click', () => {
         if (!cursorLocked) {
-            controls.lock();
+            // Request pointer lock on the document body
+            document.body.requestPointerLock = document.body.requestPointerLock || 
+                                              document.body.mozRequestPointerLock ||
+                                              document.body.webkitRequestPointerLock;
+            document.body.requestPointerLock();
         }
     });
     
-    controls.addEventListener('lock', () => {
+    // Setup pointer lock change event
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    document.addEventListener('mozpointerlockchange', handlePointerLockChange);
+    document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
+}
+
+// Handle pointer lock change events
+function handlePointerLockChange() {
+    if (document.pointerLockElement === document.body || 
+        document.mozPointerLockElement === document.body ||
+        document.webkitPointerLockElement === document.body) {
+        // Pointer is locked
         cursorLocked = true;
         document.getElementById('crosshair').style.display = 'block';
         // Hide instructions when cursor is locked
@@ -179,9 +203,8 @@ function setupControls() {
         if (instructions) {
             instructions.classList.add('hidden');
         }
-    });
-    
-    controls.addEventListener('unlock', () => {
+    } else {
+        // Pointer is unlocked
         cursorLocked = false;
         document.getElementById('crosshair').style.display = 'none';
         // Show instructions when cursor is unlocked
@@ -189,7 +212,7 @@ function setupControls() {
         if (instructions) {
             instructions.classList.remove('hidden');
         }
-    });
+    }
 }
 
 function createUI() {
@@ -470,16 +493,25 @@ function setupEventListeners() {
         // Toggle cursor lock with 'P' key
         if (event.code === 'KeyP') {
             if (cursorLocked) {
-                controls.unlock();
+                document.exitPointerLock = document.exitPointerLock || 
+                                          document.mozExitPointerLock ||
+                                          document.webkitExitPointerLock;
+                document.exitPointerLock();
             } else {
-                controls.lock();
+                document.body.requestPointerLock = document.body.requestPointerLock || 
+                                                  document.body.mozRequestPointerLock ||
+                                                  document.body.webkitRequestPointerLock;
+                document.body.requestPointerLock();
             }
         }
         
         // Quit with Escape key
         if (event.code === 'Escape') {
             // In a web context, we can't truly "quit", but we can unlock controls
-            controls.unlock();
+            document.exitPointerLock = document.exitPointerLock || 
+                                      document.mozExitPointerLock ||
+                                      document.webkitExitPointerLock;
+            document.exitPointerLock();
         }
     });
     
@@ -500,6 +532,21 @@ function setupEventListeners() {
     document.addEventListener('mouseup', (event) => {
         if (event.button === 0) {
             leftMouseHeld = false;
+        }
+    });
+    
+    // Mouse movement for camera rotation
+    document.addEventListener('mousemove', (event) => {
+        if (cursorLocked) {
+            // Rotate player based on mouse movement
+            player.rotation.y -= event.movementX * 0.002;
+            
+            // Limit vertical rotation to prevent flipping
+            const verticalRotation = player.rotation.x + event.movementY * 0.002;
+            player.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, verticalRotation));
+            
+            // Update camera position
+            updateCameraPosition();
         }
     });
     
@@ -526,6 +573,7 @@ function getLaserFromPool() {
         const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
         const newLaser = new THREE.Mesh(laserGeometry, laserMaterial);
         newLaser.visible = true;
+        newLaser.name = "Laser_" + laserPool.length; // Give each laser a unique name
         scene.add(newLaser);
         laserPool.push(newLaser);
         return newLaser;
@@ -576,21 +624,59 @@ function shootLaser() {
         console.warn('Error with audio: ', e);
     }
     
-    // Create the ray from camera
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    // Create the ray from a position much further in front of the player
+    const direction = new THREE.Vector3(0, 0, -1);
+    direction.applyQuaternion(player.quaternion);
     
-    // Get direction and start position
-    const startPos = camera.position.clone();
-    const direction = raycaster.ray.direction.clone();
+    // Start the ray 5 units in front of the player to completely avoid self-intersection
+    const rayOrigin = player.position.clone().add(direction.clone().multiplyScalar(5));
+    
+    // Add a slight upward offset to the ray origin to avoid hitting the player from above
+    rayOrigin.y += 1;
+    
+    raycaster.set(rayOrigin, direction);
+    
+    // Get start position for the laser
+    const startPos = rayOrigin.clone();
     
     // Check for intersections
     const intersects = raycaster.intersectObjects(scene.children, true);
     
+    // Create a list of objects to ignore (player and its children, any object within 6 units of player, and all lasers)
+    const ignoreList = [player, ...player.children];
+    
+    // Add all active lasers to the ignore list
+    laserPool.forEach(laser => {
+        if (laser.visible) {
+            ignoreList.push(laser);
+        }
+    });
+    
     let targetPoint, targetObject;
     if (intersects.length > 0) {
-        // Hit something
-        targetPoint = intersects[0].point;
-        targetObject = intersects[0].object;
+        // Filter out the player itself, its children, lasers, and anything too close to the player
+        const filteredIntersects = intersects.filter(intersect => {
+            // Check if the object is the player, its child, or a laser
+            const isPlayerOrChildOrLaser = ignoreList.includes(intersect.object) || 
+                                          ignoreList.includes(intersect.object.parent);
+            
+            // Check if the intersection point is too close to the player
+            const distanceFromPlayer = player.position.distanceTo(intersect.point);
+            const isTooClose = distanceFromPlayer < 6;
+            
+            // Only include intersections that are not the player, not a laser, and not too close
+            return !isPlayerOrChildOrLaser && !isTooClose;
+        });
+        
+        if (filteredIntersects.length > 0) {
+            // Hit something valid
+            targetPoint = filteredIntersects[0].point;
+            targetObject = filteredIntersects[0].object;
+        } else {
+            // Nothing valid hit, shoot into distance
+            targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
+            targetObject = null;
+        }
     } else {
         // Nothing hit, shoot into distance
         targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
@@ -695,29 +781,44 @@ function handleMovement(delta) {
     const moveSpeed = 20 * delta;
     
     if (cursorLocked) {
+        // Create a direction vector
+        const direction = new THREE.Vector3();
+        
         // Forward/backward movement
         if (keyboard['KeyW'] || keyboard['ArrowUp']) {
-            controls.moveForward(moveSpeed);
-        }
-        if (keyboard['KeyS'] || keyboard['ArrowDown']) {
-            controls.moveForward(-moveSpeed);
+            direction.z = -1;
+        } else if (keyboard['KeyS'] || keyboard['ArrowDown']) {
+            direction.z = 1;
         }
         
         // Left/right movement
         if (keyboard['KeyA'] || keyboard['ArrowLeft']) {
-            controls.moveRight(-moveSpeed);
-        }
-        if (keyboard['KeyD'] || keyboard['ArrowRight']) {
-            controls.moveRight(moveSpeed);
+            direction.x = -1;
+        } else if (keyboard['KeyD'] || keyboard['ArrowRight']) {
+            direction.x = 1;
         }
         
-        // Up/down movement (custom implementation since PointerLockControls doesn't include this)
+        // Normalize the direction vector to prevent faster diagonal movement
+        if (direction.length() > 0) {
+            direction.normalize();
+            
+            // Apply player's rotation to the direction
+            direction.applyQuaternion(player.quaternion);
+            
+            // Move player
+            player.position.add(direction.multiplyScalar(moveSpeed));
+        }
+        
+        // Up/down movement
         if (keyboard['Space']) {
-            camera.position.y += moveSpeed;
+            player.position.y += moveSpeed;
         }
         if (keyboard['ShiftLeft'] || keyboard['ShiftRight']) {
-            camera.position.y -= moveSpeed;
+            player.position.y -= moveSpeed;
         }
+        
+        // Update camera position
+        updateCameraPosition();
     }
 }
 
@@ -786,6 +887,7 @@ function animate() {
 function addDirectionHelper() {
     // Create text to help find planets
     const helpText = document.createElement('div');
+    helpText.id = 'direction-helper';
     helpText.style.position = 'absolute';
     helpText.style.bottom = '20px';
     helpText.style.left = '20px';
@@ -795,6 +897,7 @@ function addDirectionHelper() {
     helpText.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     helpText.style.padding = '10px';
     helpText.style.borderRadius = '5px';
+    helpText.style.zIndex = '50';
     helpText.innerHTML = 'Look toward the center (0,0,0).<br>Try using WASD to move around.<br>The sun is at the center with planets orbiting around it.';
     document.body.appendChild(helpText);
     
@@ -808,5 +911,52 @@ function addDirectionHelper() {
     }, 15000);
 }
 
+// Create player function
+function createPlayer() {
+    // Create a simple gray block for the player
+    const playerGeometry = new THREE.BoxGeometry(2, 2, 2);
+    const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    player = new THREE.Mesh(playerGeometry, playerMaterial);
+    player.position.set(0, 20, 70); // Much lower position
+    player.rotation.order = 'YXZ'; // Set rotation order to match camera
+    scene.add(player);
+    
+    // Add a small indicator to show which way is forward
+    const indicatorGeometry = new THREE.BoxGeometry(0.5, 0.5, 1);
+    const indicatorMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+    indicator.position.set(0, 0, -1.5); // Position it at the front of the player
+    player.add(indicator);
+}
+
+// Update camera position based on player position and rotation
+function updateCameraPosition() {
+    // Calculate camera position based on player position and rotation
+    const offset = cameraOffset.clone();
+    offset.applyQuaternion(player.quaternion);
+    camera.position.copy(player.position).add(offset);
+    
+    // Make camera look at a point far in front of the player to improve aiming
+    // This creates a better alignment between the crosshair and where shots will go
+    const lookTarget = player.position.clone().add(
+        new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion).multiplyScalar(50)
+    );
+    camera.lookAt(lookTarget);
+}
+
 // Initialize the game when the window loads
-window.addEventListener('load', init);
+window.addEventListener('load', function() {
+    console.log("Window loaded, initializing game...");
+    init();
+    
+    // Add additional click handler for the entire document
+    document.addEventListener('click', function(event) {
+        // Only handle clicks outside the start button
+        if (event.target.id !== 'start-button' && !cursorLocked) {
+            document.body.requestPointerLock = document.body.requestPointerLock || 
+                                              document.body.mozRequestPointerLock ||
+                                              document.body.webkitRequestPointerLock;
+            document.body.requestPointerLock();
+        }
+    });
+});

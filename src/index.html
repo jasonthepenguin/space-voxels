@@ -24,9 +24,27 @@
       border-radius: 5px;
       text-align: center;
       max-width: 400px;
+      z-index: 100;
     }
     #instructions.hidden {
       display: none;
+    }
+    #start-button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 15px 32px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 10px 2px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    #start-button:hover {
+      background-color: #45a049;
     }
     #crosshair {
       position: absolute;
@@ -57,12 +75,27 @@
 <body>
   <div id="instructions">
     <h1>Space Voxels</h1>
-    <p>Click to lock cursor and enter game</p>
-    <p>WASD: Move, Space: Up, Shift: Down</p>
+    <p><strong>CLICK THE BUTTON BELOW TO START</strong></p>
+    <button id="start-button">Start Game</button>
+    <p>Controls:</p>
+    <p>WASD: Move the gray block player</p>
+    <p>Mouse: Rotate the player</p>
+    <p>Space: Up, Shift: Down</p>
     <p>Left Mouse: Shoot, P: Toggle cursor lock</p>
     <p>Escape: Exit game mode</p>
+    <p><small>Note: If clicking doesn't work, try clicking the button again or refreshing the page.</small></p>
   </div>
   <div id="crosshair"></div>
   <script type="module" src="./js/main.js"></script>
+  <script>
+    // Add event listener to the start button
+    document.getElementById('start-button').addEventListener('click', function() {
+      // Request pointer lock on the document body
+      document.body.requestPointerLock = document.body.requestPointerLock || 
+                                        document.body.mozRequestPointerLock ||
+                                        document.body.webkitRequestPointerLock;
+      document.body.requestPointerLock();
+    });
+  </script>
 </body>
 </html>
