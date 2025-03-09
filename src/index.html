@@ -3,13 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Three.js Game</title>
+  <title>Space Voxels</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      font-family: Arial, sans-serif;
+    }
+    canvas { 
+      display: block; 
+    }
+    #instructions {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 20px;
+      border-radius: 5px;
+      text-align: center;
+      max-width: 400px;
+    }
+    #instructions.hidden {
+      display: none;
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+    }
   </style>
 </head>
 <body>
+  <div id="instructions">
+    <h1>Space Voxels</h1>
+    <p>Click to lock cursor and enter game</p>
+    <p>WASD: Move, Space: Up, Shift: Down</p>
+    <p>Left Mouse: Shoot, P: Toggle cursor lock</p>
+    <p>Escape: Exit game mode</p>
+  </div>
+  <div id="crosshair"></div>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>
