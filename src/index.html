@@ -32,13 +32,25 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.7);
+      width: 20px;
+      height: 20px;
       transform: translate(-50%, -50%);
       pointer-events: none;
       display: none;
+    }
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.9);
+      width: 3px;
+      height: 100%;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%) rotate(45deg);
+    }
+    #crosshair::after {
+      transform: translateX(-50%) rotate(-45deg);
     }
   </style>
 </head>

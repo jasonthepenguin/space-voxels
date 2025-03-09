@@ -27,14 +27,14 @@ const keyboard = {};
 
 // Planet data: name, texture, size, orbit_radius, orbit_speed
 const planetData = [
-    { name: 'Mercury', texture: 'gray.png', size: 1, orbitRadius: 12, orbitSpeed: 0.04 * 3 },
-    { name: 'Venus', texture: 'yellow.png', size: 2, orbitRadius: 16, orbitSpeed: 0.015 * 3 },
-    { name: 'Earth', texture: 'mixed', size: 2, orbitRadius: 22, orbitSpeed: 0.01 * 3 },
-    { name: 'Mars', texture: 'red.png', size: 1.5, orbitRadius: 28, orbitSpeed: 0.008 * 3 },
-    { name: 'Jupiter', texture: 'jupiter.png', size: 4, orbitRadius: 40, orbitSpeed: 0.002 * 3 },
-    { name: 'Saturn', texture: 'yellow.png', size: 3.5, orbitRadius: 55, orbitSpeed: 0.0015 * 3 },
-    { name: 'Uranus', texture: 'light_blue.png', size: 3, orbitRadius: 70, orbitSpeed: 0.001 * 3 },
-    { name: 'Neptune', texture: 'water.png', size: 3, orbitRadius: 85, orbitSpeed: 0.0008 * 3 }
+    { name: 'Mercury', texture: 'gray.png', size: 1, orbitRadius: 12, orbitSpeed: 0.04 * 3 * 4 },
+    { name: 'Venus', texture: 'yellow.png', size: 2, orbitRadius: 16, orbitSpeed: 0.015 * 3 * 4 },
+    { name: 'Earth', texture: 'mixed', size: 2, orbitRadius: 22, orbitSpeed: 0.01 * 3 * 4 },
+    { name: 'Mars', texture: 'red.png', size: 1.5, orbitRadius: 28, orbitSpeed: 0.008 * 3 * 4 },
+    { name: 'Jupiter', texture: 'jupiter.png', size: 4, orbitRadius: 40, orbitSpeed: 0.002 * 3 * 4 },
+    { name: 'Saturn', texture: 'yellow.png', size: 3.5, orbitRadius: 55, orbitSpeed: 0.0015 * 3 * 4 },
+    { name: 'Uranus', texture: 'light_blue.png', size: 3, orbitRadius: 70, orbitSpeed: 0.001 * 3 * 4 },
+    { name: 'Neptune', texture: 'water.png', size: 3, orbitRadius: 85, orbitSpeed: 0.0008 * 3 * 4 }
 ];
 
 // Initialize the game
@@ -366,9 +366,6 @@ function createPlanets() {
         planet.position.x = Math.cos(planet.orbitAngle) * planet.orbitRadius;
         planet.position.z = Math.sin(planet.orbitAngle) * planet.orbitRadius;
         
-        // Add planet label
-        createPlanetLabel(planet);
-        
         scene.add(planet);
         planets.push(planet);
     });
@@ -388,27 +385,6 @@ function createOrbitLines() {
         orbitLine.rotation.x = Math.PI / 2; // Rotate to horizontal plane
         scene.add(orbitLine);
     });
-}
-
-// Create a label for each planet to make them easier to identify
-function createPlanetLabel(planet) {
-    // Create div for the label
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'planet-label';
-    labelDiv.textContent = planet.name;
-    labelDiv.style.position = 'absolute';
-    labelDiv.style.color = 'white';
-    labelDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    labelDiv.style.padding = '2px 5px';
-    labelDiv.style.borderRadius = '3px';
-    labelDiv.style.fontSize = '12px';
-    labelDiv.style.fontFamily = 'Arial, sans-serif';
-    labelDiv.style.pointerEvents = 'none';
-    labelDiv.style.display = 'none'; // Start hidden
-    document.body.appendChild(labelDiv);
-    
-    // Store reference to the label
-    planet.label = labelDiv;
 }
 
 function createSaturnRings(planet, planetSize) {
@@ -449,7 +425,7 @@ function createMoon() {
         moon.name = 'Moon';
         moon.parent = earth;
         moon.position.set(5, 0, 0);
-        moon.rotationSpeed = 0.02;
+        moon.rotationSpeed = 0.08; // Already increased from 0.02 to 0.08 (4x faster)
         moon.rotationAngle = 0;
         moon.blockDict = {};
         
@@ -494,22 +470,6 @@ function createMoon() {
         
         earth.add(moon);
         earth.moon = moon;
-        
-        // Add moon label
-        const moonLabel = document.createElement('div');
-        moonLabel.className = 'planet-label';
-        moonLabel.textContent = 'Moon';
-        moonLabel.style.position = 'absolute';
-        moonLabel.style.color = 'white';
-        moonLabel.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        moonLabel.style.padding = '2px 5px';
-        moonLabel.style.borderRadius = '3px';
-        moonLabel.style.fontSize = '10px';
-        moonLabel.style.fontFamily = 'Arial, sans-serif';
-        moonLabel.style.pointerEvents = 'none';
-        moonLabel.style.display = 'none';
-        document.body.appendChild(moonLabel);
-        moon.label = moonLabel;
     }
 }
 
@@ -828,9 +788,6 @@ function animate() {
     
     // Handle auto-fire
     handleAutoFire(delta);
-    
-    // Update planet labels
-    updatePlanetLabels();
     
     // Render the scene
     renderer.render(scene, camera);
