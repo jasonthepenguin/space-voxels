@@ -19,6 +19,7 @@ const AUTO_FIRE_DELAY = 0.3;
 let cursorLocked = false;
 let player; // Player object
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
+let orbitLines = []; // Store references to orbit lines
 
 // Textures
 const textures = {};
@@ -172,17 +173,6 @@ function setupLighting() {
 function setupControls() {
     // We're not using PointerLockControls anymore
     // Instead, we'll handle player movement and rotation manually
-    
-    // Add event listener for locking/unlocking the pointer
-    document.addEventListener('click', () => {
-        if (!cursorLocked) {
-            // Request pointer lock on the document body
-            document.body.requestPointerLock = document.body.requestPointerLock || 
-                                              document.body.mozRequestPointerLock ||
-                                              document.body.webkitRequestPointerLock;
-            document.body.requestPointerLock();
-        }
-    });
     
     // Setup pointer lock change event
     document.addEventListener('pointerlockchange', handlePointerLockChange);
@@ -395,7 +385,11 @@ function createOrbitLines() {
         });
         const orbitLine = new THREE.Mesh(orbitGeometry, orbitMaterial);
         orbitLine.rotation.x = Math.PI / 2; // Rotate to horizontal plane
+        orbitLine.name = "OrbitLine_" + data.name; // Give each orbit line a unique name
         scene.add(orbitLine);
+        
+        // Store reference to orbit line
+        orbitLines.push(orbitLine);
     });
 }
 
@@ -521,11 +515,9 @@ function setupEventListeners() {
     
     // Mouse event listeners
     document.addEventListener('mousedown', (event) => {
-        if (event.button === 0) { // Left mouse button
+        if (event.button === 0 && cursorLocked) { // Left mouse button and cursor is locked
             leftMouseHeld = true;
-            if (cursorLocked) {
-                shootLaser();
-            }
+            shootLaser();
         }
     });
     
@@ -600,6 +592,7 @@ function getFlashFromPool() {
         const flashMaterial = new THREE.MeshBasicMaterial({ color: 0xff3232, transparent: true, opacity: 0.8 });
         const newFlash = new THREE.Mesh(flashGeometry, flashMaterial);
         newFlash.visible = false;
+        newFlash.name = "Flash_" + flashPool.length; // Give each flash a unique name
         scene.add(newFlash);
         flashPool.push(newFlash);
         return newFlash;
@@ -642,7 +635,7 @@ function shootLaser() {
     // Check for intersections
     const intersects = raycaster.intersectObjects(scene.children, true);
     
-    // Create a list of objects to ignore (player and its children, any object within 6 units of player, and all lasers)
+    // Create a list of objects to ignore (player and its children, lasers, orbit lines, flashes)
     const ignoreList = [player, ...player.children];
     
     // Add all active lasers to the ignore list
@@ -652,20 +645,33 @@ function shootLaser() {
         }
     });
     
+    // Add all flash objects to the ignore list
+    flashPool.forEach(flash => {
+        ignoreList.push(flash);
+    });
+    
+    // Add all orbit lines to the ignore list
+    orbitLines.forEach(line => {
+        ignoreList.push(line);
+    });
+    
     let targetPoint, targetObject;
     if (intersects.length > 0) {
-        // Filter out the player itself, its children, lasers, and anything too close to the player
+        // Filter out objects to ignore and anything too close to the player
         const filteredIntersects = intersects.filter(intersect => {
-            // Check if the object is the player, its child, or a laser
-            const isPlayerOrChildOrLaser = ignoreList.includes(intersect.object) || 
-                                          ignoreList.includes(intersect.object.parent);
+            // Check if the object is in the ignore list or its parent is
+            const isIgnored = ignoreList.includes(intersect.object) || 
+                             ignoreList.includes(intersect.object.parent);
+            
+            // Check if the object name contains "OrbitLine" (as a fallback)
+            const isOrbitLine = intersect.object.name && intersect.object.name.includes("OrbitLine");
             
             // Check if the intersection point is too close to the player
             const distanceFromPlayer = player.position.distanceTo(intersect.point);
             const isTooClose = distanceFromPlayer < 6;
             
-            // Only include intersections that are not the player, not a laser, and not too close
-            return !isPlayerOrChildOrLaser && !isTooClose;
+            // Only include intersections that are not ignored, not orbit lines, and not too close
+            return !isIgnored && !isOrbitLine && !isTooClose;
         });
         
         if (filteredIntersects.length > 0) {
@@ -705,6 +711,7 @@ function shootLaser() {
         const flash = getFlashFromPool();
         flash.position.copy(targetPoint);
         flash.visible = true;
+        flash.name = "Flash"; // Add a name to help with identification
         
         // Hide flash after a short time
         setTimeout(() => {
@@ -885,30 +892,7 @@ function animate() {
 
 // Add temporary direction helper function
 function addDirectionHelper() {
-    // Create text to help find planets
-    const helpText = document.createElement('div');
-    helpText.id = 'direction-helper';
-    helpText.style.position = 'absolute';
-    helpText.style.bottom = '20px';
-    helpText.style.left = '20px';
-    helpText.style.color = 'white';
-    helpText.style.fontFamily = 'Arial, sans-serif';
-    helpText.style.fontSize = '16px';
-    helpText.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    helpText.style.padding = '10px';
-    helpText.style.borderRadius = '5px';
-    helpText.style.zIndex = '50';
-    helpText.innerHTML = 'Look toward the center (0,0,0).<br>Try using WASD to move around.<br>The sun is at the center with planets orbiting around it.';
-    document.body.appendChild(helpText);
-    
-    // Auto-hide after 15 seconds
-    setTimeout(() => {
-        helpText.style.opacity = '0';
-        helpText.style.transition = 'opacity 1s';
-        setTimeout(() => {
-            helpText.remove();
-        }, 1000);
-    }, 15000);
+    // Function is now empty - no direction helper text will be displayed
 }
 
 // Create player function
@@ -948,15 +932,4 @@ function updateCameraPosition() {
 window.addEventListener('load', function() {
     console.log("Window loaded, initializing game...");
     init();
-    
-    // Add additional click handler for the entire document
-    document.addEventListener('click', function(event) {
-        // Only handle clicks outside the start button
-        if (event.target.id !== 'start-button' && !cursorLocked) {
-            document.body.requestPointerLock = document.body.requestPointerLock || 
-                                              document.body.mozRequestPointerLock ||
-                                              document.body.webkitRequestPointerLock;
-            document.body.requestPointerLock();
-        }
-    });
 });
