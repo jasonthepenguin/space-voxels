@@ -22,8 +22,6 @@ position_y = (screen_height -  window_height) // 2
 
 app = Ursina(position=(position_x, position_y), size=(window_width, window_height))
 
-#app = Ursina()
-
 
 
 window.title = 'Voxel Solar System Explorer'
@@ -57,7 +55,7 @@ flash_pool = []
 # Voxel-based Sun
 sun = Entity()
 # Use sun.png texture instead of solid color
-sun_texture = load_texture('sun.png')
+sun_texture = load_texture('textures/sun.png')
 
 # Dictionary to store sun blocks by position
 sun.block_dict = {}
@@ -93,15 +91,15 @@ planets = []
 
 # Load textures once
 textures = {
-    'orange.png': load_texture('orange.png'),
-    'yellow.png': load_texture('yellow.png'),
-    'grass.png': load_texture('grass.png'),
-    'water.png': load_texture('water.png'),
-    'red.png': load_texture('red.png'),
-    'light_blue.png': load_texture('light_blue.png'),
-    'jupiter.png': load_texture('jupiter.png'),  # Add the new texture
-    'white.png': load_texture('white.png'),  # Add white texture for the moon
-    'gray.png': load_texture('gray.png'),  # Add gray texture for Mercury
+    'orange.png': load_texture('textures/orange.png'),
+    'yellow.png': load_texture('textures/yellow.png'),
+    'grass.png': load_texture('textures/grass.png'),
+    'water.png': load_texture('textures/water.png'),
+    'red.png': load_texture('textures/red.png'),
+    'light_blue.png': load_texture('textures/light_blue.png'),
+    'jupiter.png': load_texture('textures/jupiter.png'),  # Add the new texture
+    'white.png': load_texture('textures/white.png'),  # Add white texture for the moon
+    'gray.png': load_texture('textures/gray.png'),  # Add gray texture for Mercury
 }
 
 # Create voxel planets with optimized structure
@@ -495,7 +493,7 @@ crosshair = Entity(
 )
 
 # Replace the default Sky() with a custom skybox using stars.png
-sky = Sky(texture="stars.png")
+sky = Sky(texture="textures/stars.png")
 
 # Add a moon to Earth
 earth = None

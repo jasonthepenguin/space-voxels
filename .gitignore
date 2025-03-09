@@ -6,3 +6,6 @@
 
 # ignore python env folder
 env/
+
+
+textures/
