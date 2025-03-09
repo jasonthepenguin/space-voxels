@@ -22,34 +22,38 @@ let cursorLocked = false;
 const textures = {};
 const textureLoader = new THREE.TextureLoader();
 
-// Fallback colors for textures
-const fallbackColors = {
-    'orange.png': 0xff8800,
-    'yellow.png': 0xffff00,
-    'grass.png': 0x00ff00,
-    'water.png': 0x0000ff,
-    'red.png': 0xff0000,
-    'light_blue.png': 0x88ccff,
-    'jupiter.png': 0xff9933,
-    'white.png': 0xffffff,
-    'gray.png': 0x888888,
-    'stars.png': 0x222244,
-    'sun.png': 0xffff88
+// Colors for celestial bodies
+const celestialColors = {
+    sun: 0xffff88,
+    mercury: 0x888888,
+    venus: 0xffff00,
+    earthWater: 0x0000ff,
+    earthLand: 0x00ff00,
+    mars: 0xff0000,
+    jupiterOrange: 0xff8800,
+    jupiterYellow: 0xffff00,
+    jupiterRed: 0xff4400,
+    saturnYellow: 0xffff00,
+    saturnOrange: 0xff8800,
+    uranus: 0x88ccff,
+    neptune: 0x0000ff,
+    moon: 0xffffff,
+    stars: 0x222244
 };
 
 // Keyboard state
 const keyboard = {};
 
-// Planet data: name, texture, size, orbit_radius, orbit_speed
+// Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
-    { name: 'Mercury', texture: 'gray.png', size: 1, orbitRadius: 12, orbitSpeed: 0.04 * 3 * 4 },
-    { name: 'Venus', texture: 'yellow.png', size: 2, orbitRadius: 16, orbitSpeed: 0.015 * 3 * 4 },
-    { name: 'Earth', texture: 'mixed', size: 2, orbitRadius: 22, orbitSpeed: 0.01 * 3 * 4 },
-    { name: 'Mars', texture: 'red.png', size: 1.5, orbitRadius: 28, orbitSpeed: 0.008 * 3 * 4 },
-    { name: 'Jupiter', texture: 'jupiter.png', size: 4, orbitRadius: 40, orbitSpeed: 0.002 * 3 * 4 },
-    { name: 'Saturn', texture: 'yellow.png', size: 3.5, orbitRadius: 55, orbitSpeed: 0.0015 * 3 * 4 },
-    { name: 'Uranus', texture: 'light_blue.png', size: 3, orbitRadius: 70, orbitSpeed: 0.001 * 3 * 4 },
-    { name: 'Neptune', texture: 'water.png', size: 3, orbitRadius: 85, orbitSpeed: 0.0008 * 3 * 4 }
+    { name: 'Mercury', size: 1, orbitRadius: 12, orbitSpeed: 0.04 * 3 * 4 },
+    { name: 'Venus', size: 2, orbitRadius: 16, orbitSpeed: 0.015 * 3 * 4 },
+    { name: 'Earth', size: 2, orbitRadius: 22, orbitSpeed: 0.01 * 3 * 4 },
+    { name: 'Mars', size: 1.5, orbitRadius: 28, orbitSpeed: 0.008 * 3 * 4 },
+    { name: 'Jupiter', size: 4, orbitRadius: 40, orbitSpeed: 0.002 * 3 * 4 },
+    { name: 'Saturn', size: 3.5, orbitRadius: 55, orbitSpeed: 0.0015 * 3 * 4 },
+    { name: 'Uranus', size: 3, orbitRadius: 70, orbitSpeed: 0.001 * 3 * 4 },
+    { name: 'Neptune', size: 3, orbitRadius: 85, orbitSpeed: 0.0008 * 3 * 4 }
 ];
 
 // Initialize the game
@@ -69,8 +73,8 @@ function init() {
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Load textures (only for skybox)
-    loadTextures();
+    // Load stars texture for skybox
+    loadStarsTexture();
 
     // Create skybox with stars
     createSkybox();
@@ -107,45 +111,32 @@ function init() {
     animate();
 }
 
-function loadTextures() {
+function loadStarsTexture() {
     // Only load the stars texture for skybox
-    textures['stars.png'] = textureLoader.load(
+    textures['stars'] = textureLoader.load(
         `./js/textures/stars.png`,
         undefined,
         undefined,
         () => {
-            console.warn(`Could not load texture: stars.png, using fallback color`);
+            console.warn(`Could not load stars texture, using fallback color`);
             const canvas = document.createElement('canvas');
             canvas.width = 128;
             canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = `#${fallbackColors['stars.png'].toString(16).padStart(6, '0')}`;
+            ctx.fillStyle = `#${celestialColors.stars.toString(16).padStart(6, '0')}`;
             ctx.fillRect(0, 0, 128, 128);
             
             const fallbackTexture = new THREE.CanvasTexture(canvas);
-            textures['stars.png'] = fallbackTexture;
+            textures['stars'] = fallbackTexture;
         }
     );
-}
-
-// Create a texture from a fallback color
-function createColorTexture(colorName) {
-    const color = fallbackColors[colorName];
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
-    ctx.fillRect(0, 0, 128, 128);
-    
-    return new THREE.CanvasTexture(canvas);
 }
 
 function createSkybox() {
     const skyGeometry = new THREE.BoxGeometry(500, 500, 500);
     const skyMaterials = Array(6).fill().map(() => {
         return new THREE.MeshBasicMaterial({
-            map: textures['stars.png'],
+            map: textures['stars'],
             side: THREE.BackSide
         });
     });
@@ -223,9 +214,6 @@ function createSun() {
     sun.name = "Sun";
     sun.blockDict = {};
     
-    // Create a color texture for the sun
-    const sunColor = fallbackColors['sun.png'];
-    
     // Create voxel-based sun with emissive material to make it glow
     for (let x = -5; x <= 5; x++) {
         for (let y = -5; y <= 5; y++) {
@@ -233,7 +221,7 @@ function createSun() {
                 if (x*x + y*y + z*z <= 25) {
                     const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
                     const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                        color: sunColor,
+                        color: celestialColors.sun,
                         emissive: 0xffff00,
                         emissiveIntensity: 0.5
                     });
@@ -288,59 +276,56 @@ function createPlanets() {
                         let voxelColor;
                         let emissiveColor;
                         
-                        if (data.texture === 'mixed') {
+                        if (data.name === 'Earth') {
                             // Earth special case
-                            voxelColor = Math.random() < 0.7 ? fallbackColors['water.png'] : fallbackColors['grass.png'];
+                            voxelColor = Math.random() < 0.7 ? celestialColors.earthWater : celestialColors.earthLand;
                             emissiveColor = Math.random() < 0.7 ? 0x0033ff : 0x00ff33; // Blue or green glow
                         } else if (data.name === 'Jupiter') {
                             // Jupiter banded appearance
                             const band = (y + voxelRange) % 3;
                             if (band === 0) {
-                                voxelColor = fallbackColors['orange.png'];
+                                voxelColor = celestialColors.jupiterOrange;
                                 emissiveColor = 0xff8800;
                             } else if (band === 1) {
-                                voxelColor = fallbackColors['yellow.png'];
+                                voxelColor = celestialColors.jupiterYellow;
                                 emissiveColor = 0xffff00;
                             } else {
-                                voxelColor = fallbackColors['red.png'];
+                                voxelColor = celestialColors.jupiterRed;
                                 emissiveColor = 0xff4400;
                             }
                         } else if (data.name === 'Saturn') {
                             // Saturn banded appearance
                             const band = (y + voxelRange) % 2;
-                            voxelColor = band === 0 ? fallbackColors['yellow.png'] : fallbackColors['orange.png'];
+                            voxelColor = band === 0 ? celestialColors.saturnYellow : celestialColors.saturnOrange;
                             emissiveColor = band === 0 ? 0xffff00 : 0xff8800;
                         } else if (data.name === 'Venus') {
                             // Venus cloud patterns
                             const patternValue = (x + y + z) % 4;
                             if (patternValue === 0) {
-                                voxelColor = fallbackColors['yellow.png'];
+                                voxelColor = celestialColors.saturnYellow;
                                 emissiveColor = 0xffff00;
                             } else if (patternValue === 1) {
-                                voxelColor = fallbackColors['orange.png'];
+                                voxelColor = celestialColors.jupiterOrange;
                                 emissiveColor = 0xff8800;
                             } else if (patternValue === 2) {
-                                voxelColor = fallbackColors['yellow.png'];
+                                voxelColor = celestialColors.saturnYellow;
                                 emissiveColor = 0xffffaa;
                             } else {
-                                voxelColor = fallbackColors['white.png'];
+                                voxelColor = celestialColors.moon;
                                 emissiveColor = 0xffffff;
                             }
                         } else if (data.name === 'Mars') {
-                            voxelColor = fallbackColors['red.png'];
+                            voxelColor = celestialColors.mars;
                             emissiveColor = 0xff4400;
                         } else if (data.name === 'Mercury') {
-                            voxelColor = fallbackColors['gray.png'];
+                            voxelColor = celestialColors.mercury;
                             emissiveColor = 0x888888;
                         } else if (data.name === 'Uranus') {
-                            voxelColor = fallbackColors['light_blue.png'];
+                            voxelColor = celestialColors.uranus;
                             emissiveColor = 0x00ccff;
                         } else if (data.name === 'Neptune') {
-                            voxelColor = fallbackColors['water.png'];
+                            voxelColor = celestialColors.neptune;
                             emissiveColor = 0x0066ff;
-                        } else {
-                            voxelColor = fallbackColors[data.texture];
-                            emissiveColor = 0xffffff;
                         }
                         
                         const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -404,7 +389,7 @@ function createSaturnRings(planet, planetSize) {
             if (4 <= distanceFromCenter && distanceFromCenter <= ringRadius) {
                 const voxelGeometry = new THREE.BoxGeometry(1, ringThickness, 1);
                 const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                    color: fallbackColors['orange.png'],
+                    color: celestialColors.saturnOrange,
                     emissive: 0xff8800,  // Make rings glow orange
                     emissiveIntensity: 0.3
                 });
@@ -456,7 +441,7 @@ function createMoon() {
                         
                         const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
                         const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                            color: fallbackColors['white.png'],
+                            color: celestialColors.moon,
                             emissive: 0xaaaaaa,       // Soft white glow
                             emissiveIntensity: 0.2    // Slightly dimmer than planets
                         });
