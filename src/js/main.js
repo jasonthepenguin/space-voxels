@@ -19,6 +19,9 @@ let player; // Player object
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
 let orbitLines = []; // Store references to orbit lines
 let clock; // Three.js clock for delta time
+let soundPool = [];
+const MAX_SOUNDS = 5;
+let soundsLoaded = false;
 
 // Textures
 const textures = {};
@@ -52,7 +55,7 @@ const keyboard = {};
 // Global scaling factors
 const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
 const PLANET_SIZE_MULTIPLIER = 2;  // Controls overall planet sizes
-const ORBIT_RADIUS_MULTIPLIER = 1.1; // Controls distances between planets
+const ORBIT_RADIUS_MULTIPLIER = 1.2; // Controls distances between planets
 
 // Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
@@ -153,6 +156,8 @@ function init() {
 
     // Start animation loop
     animate();
+    
+    preloadSounds();
     
     console.log("Game initialized successfully");
 }
@@ -749,16 +754,40 @@ function getFlashFromPool() {
     return oldestFlash;
 }
 
-function shootLaser() {
-    // Play sound if available, otherwise skip it
-    try {
-        const shootSound = new Audio('./js/sounds/laser_sound_3.wav');
-        shootSound.currentTime = 0; // Start from beginning since we're using a new sound file
-        shootSound.play().catch(e => {
-            console.warn('Could not play shoot sound: ', e);
+function preloadSounds() {
+    // Create a pool of audio objects
+    for (let i = 0; i < MAX_SOUNDS; i++) {
+        const sound = new Audio('./js/sounds/laser_sound_3.wav');
+        sound.load(); // Preload the sound
+        sound.volume = 0.5; // Set appropriate volume
+        soundPool.push({
+            audio: sound,
+            isPlaying: false
         });
-    } catch (e) {
-        console.warn('Error with audio: ', e);
+    }
+    soundsLoaded = true;
+}
+
+function shootLaser() {
+    // Play sound from pool if available
+    if (soundsLoaded) {
+        // Find an available sound in the pool
+        const availableSound = soundPool.find(s => !s.isPlaying);
+        if (availableSound) {
+            availableSound.isPlaying = true;
+            availableSound.audio.currentTime = 0;
+            availableSound.audio.play()
+                .then(() => {
+                    // Mark as available when playback ends
+                    availableSound.audio.onended = () => {
+                        availableSound.isPlaying = false;
+                    };
+                })
+                .catch(e => {
+                    console.warn('Could not play sound: ', e);
+                    availableSound.isPlaying = false;
+                });
+        }
     }
     
     // Use camera direction for aiming, but start from player
