@@ -51,8 +51,8 @@ const keyboard = {};
 
 // Global scaling factors
 const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
-const PLANET_SIZE_MULTIPLIER = 5;  // Controls overall planet sizes
-const ORBIT_RADIUS_MULTIPLIER = 2; // Controls distances between planets
+const PLANET_SIZE_MULTIPLIER = 2;  // Controls overall planet sizes
+const ORBIT_RADIUS_MULTIPLIER = 1.1; // Controls distances between planets
 
 // Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
