@@ -121,34 +121,49 @@ function init() {
 }
 
 function loadStarsTexture() {
-    // Only load the stars texture for skybox
-    textures['stars'] = textureLoader.load(
-        `./js/textures/stars.png`,
-        undefined,
-        undefined,
-        () => {
-            console.warn(`Could not load stars texture, using fallback color`);
-            const canvas = document.createElement('canvas');
-            canvas.width = 128;
-            canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = `#${celestialColors.stars.toString(16).padStart(6, '0')}`;
-            ctx.fillRect(0, 0, 128, 128);
-            
-            const fallbackTexture = new THREE.CanvasTexture(canvas);
-            textures['stars'] = fallbackTexture;
-        }
-    );
+    // Load all 6 skybox textures
+    const skyboxTextures = [
+        'skybox_right.png',
+        'skybox_left.png',
+        'skybox_top.png',
+        'skybox_bottom.png',
+        'skybox_front.png',
+        'skybox_back.png'
+    ];
+    
+    skyboxTextures.forEach((textureName, index) => {
+        textures[`skybox_${index}`] = textureLoader.load(
+            `./js/textures/${textureName}`,
+            undefined,
+            undefined,
+            () => {
+                console.warn(`Could not load ${textureName}, using fallback color`);
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = `#${celestialColors.stars.toString(16).padStart(6, '0')}`;
+                ctx.fillRect(0, 0, 128, 128);
+                
+                const fallbackTexture = new THREE.CanvasTexture(canvas);
+                textures[`skybox_${index}`] = fallbackTexture;
+            }
+        );
+    });
 }
 
 function createSkybox() {
     const skyGeometry = new THREE.BoxGeometry(500, 500, 500);
-    const skyMaterials = Array(6).fill().map(() => {
-        return new THREE.MeshBasicMaterial({
-            map: textures['stars'],
-            side: THREE.BackSide
-        });
-    });
+    
+    // Create materials for each face of the skybox using the loaded textures
+    const skyMaterials = [
+        new THREE.MeshBasicMaterial({ map: textures['skybox_0'], side: THREE.BackSide }), // right
+        new THREE.MeshBasicMaterial({ map: textures['skybox_1'], side: THREE.BackSide }), // left
+        new THREE.MeshBasicMaterial({ map: textures['skybox_2'], side: THREE.BackSide }), // top
+        new THREE.MeshBasicMaterial({ map: textures['skybox_3'], side: THREE.BackSide }), // bottom
+        new THREE.MeshBasicMaterial({ map: textures['skybox_4'], side: THREE.BackSide }), // front
+        new THREE.MeshBasicMaterial({ map: textures['skybox_5'], side: THREE.BackSide })  // back
+    ];
     
     const skybox = new THREE.Mesh(skyGeometry, skyMaterials);
     scene.add(skybox);
