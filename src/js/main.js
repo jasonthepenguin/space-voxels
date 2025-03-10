@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import uiManager, { GameState } from './uiManager.js';
 
 // Game state variables
 let scene, camera, renderer, controls;
@@ -23,6 +24,16 @@ let soundPool = [];
 const MAX_SOUNDS = 5;
 let soundsLoaded = false;
 let gameStarted = false; // Track if game has started
+
+// Expose gameStarted to window for UI access
+Object.defineProperty(window, 'gameStarted', {
+    get: function() {
+        return gameStarted;
+    }
+});
+
+// Expose resetGame to window for UI access
+window.resetGame = resetGame;
 
 // Textures
 const textures = {};
@@ -117,8 +128,8 @@ function init() {
     camera.position.set(0, 30, 100);
     camera.lookAt(0, 0, 0);
     
-    // Expose camera to window object for UI animations
-    window.threeCamera = camera;
+    // Initialize UI Manager with camera and game start callback
+    uiManager.init(camera, startGame);
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -230,10 +241,7 @@ function setupLighting() {
 }
 
 function setupControls() {
-    // We're not using PointerLockControls anymore
-    // Instead, we'll handle player movement and rotation manually
-    
-    // Setup pointer lock change event
+    // Add pointer lock event listeners
     document.addEventListener('pointerlockchange', handlePointerLockChange);
     document.addEventListener('mozpointerlockchange', handlePointerLockChange);
     document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
@@ -246,29 +254,9 @@ function handlePointerLockChange() {
         document.webkitPointerLockElement === document.body) {
         // Pointer is locked
         cursorLocked = true;
-        document.getElementById('crosshair').style.display = 'block';
-        
-        // Hide all menu UIs when game starts
-        document.getElementById('instructions').style.display = 'none';
-        document.getElementById('ship-builder-ui').style.display = 'none';
-        
-        // Start the game if not already started
-        if (!gameStarted) {
-            startGame();
-        }
     } else {
         // Pointer is unlocked
         cursorLocked = false;
-        document.getElementById('crosshair').style.display = 'none';
-        
-        // Only show instructions when cursor is unlocked and game was started
-        // (don't show it if we're in ship builder)
-        if (gameStarted) {
-            const shipBuilderVisible = document.getElementById('ship-builder-ui').style.display === 'block';
-            if (!shipBuilderVisible) {
-                document.getElementById('instructions').style.display = 'block';
-            }
-        }
     }
 }
 
@@ -645,11 +633,14 @@ function setupEventListeners() {
         
         // Quit with Escape key
         if (event.code === 'Escape') {
-            // In a web context, we can't truly "quit", but we can unlock controls
-            document.exitPointerLock = document.exitPointerLock || 
-                                      document.mozExitPointerLock ||
-                                      document.webkitExitPointerLock;
-            document.exitPointerLock();
+            // Only exit pointer lock if game is started
+            if (gameStarted && cursorLocked) {
+                document.exitPointerLock = document.exitPointerLock || 
+                                          document.mozExitPointerLock ||
+                                          document.webkitExitPointerLock;
+                document.exitPointerLock();
+                // The resetGame function will be called by the pointerlock change event
+            }
         }
     });
     
@@ -659,7 +650,7 @@ function setupEventListeners() {
     
     // Mouse event listeners
     document.addEventListener('mousedown', (event) => {
-        if (event.button === 0 && cursorLocked && gameStarted) { // Only shoot if game started
+        if (event.button === 0 && cursorLocked && uiManager.isPlaying()) { // Only shoot if game started
             leftMouseHeld = true;
             shootLaser();
         }
@@ -673,7 +664,7 @@ function setupEventListeners() {
     
     // Mouse movement for camera rotation
     document.addEventListener('mousemove', (event) => {
-        if (cursorLocked && gameStarted) { // Only rotate if game started
+        if (cursorLocked && uiManager.isPlaying()) { // Only rotate if game started
             // Rotate player based on mouse movement
             player.rotation.y -= event.movementX * 0.002;
             
@@ -1126,15 +1117,36 @@ function startGame() {
     console.log("Starting game...");
     gameStarted = true;
     
-    // Hide all menu UIs
-    document.getElementById('instructions').style.display = 'none';
-    document.getElementById('ship-builder-ui').style.display = 'none';
-    
     // Create player now that game is starting
     createPlayer();
     
     // Update camera position to follow player
     updateCameraPosition();
+}
+
+// New function to reset the game state
+function resetGame() {
+    console.log("Resetting game...");
+    
+    // Reset game state
+    gameStarted = false;
+    
+    // Remove player from scene if it exists
+    if (player) {
+        scene.remove(player);
+        player = null;
+    }
+    
+    // Reset camera to initial position
+    camera.position.set(0, 30, 100);
+    camera.rotation.set(0, 0, 0);
+    camera.lookAt(0, 0, 0);
+    
+    // Clear any active lasers
+    lasers.forEach(laser => {
+        laser.visible = false;
+    });
+    lasers = [];
 }
 
 // Initialize the game when the window loads
