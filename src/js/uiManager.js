@@ -18,6 +18,7 @@ class UIManager {
         this.shipBuilderElement = document.getElementById('ship-builder-ui');
         this.crosshairElement = document.getElementById('crosshair');
         this.fpsCounterElement = document.getElementById('fps-counter');
+        this.playersCounterElement = document.getElementById('players-counter');
         
         // Buttons
         this.startButton = document.getElementById('start-button');
@@ -63,18 +64,21 @@ class UIManager {
                 this.instructionsElement.style.display = 'block';
                 this.shipBuilderElement.style.display = 'none';
                 this.crosshairElement.style.display = 'none';
+                this.playersCounterElement.style.display = 'none';
                 break;
                 
             case GameState.SHIP_BUILDER:
                 this.instructionsElement.style.display = 'none';
                 this.shipBuilderElement.style.display = 'block';
                 this.crosshairElement.style.display = 'none';
+                this.playersCounterElement.style.display = 'none';
                 break;
                 
             case GameState.PLAYING:
                 this.instructionsElement.style.display = 'none';
                 this.shipBuilderElement.style.display = 'none';
                 this.crosshairElement.style.display = 'block';
+                this.playersCounterElement.style.display = 'block';
                 
                 // Request pointer lock
                 document.body.requestPointerLock = document.body.requestPointerLock || 
@@ -131,6 +135,7 @@ class UIManager {
             // Pointer is locked, we're in game mode
             console.log("Pointer locked - game mode");
             this.crosshairElement.style.display = 'block';
+            this.playersCounterElement.style.display = 'block';
             
             // Only change state if we're not already playing
             if (this.currentState !== GameState.PLAYING) {
@@ -140,6 +145,7 @@ class UIManager {
             // Pointer is unlocked, we're in menu mode
             console.log("Pointer unlocked - menu mode");
             this.crosshairElement.style.display = 'none';
+            this.playersCounterElement.style.display = 'none';
             
             // Only return to menu if we were playing
             if (this.currentState === GameState.PLAYING) {

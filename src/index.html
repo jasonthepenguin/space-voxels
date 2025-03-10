@@ -98,6 +98,18 @@
       font-size: 14px;
       z-index: 100;
     }
+    #players-counter {
+      position: absolute;
+      top: 40px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-size: 14px;
+      z-index: 100;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -127,6 +139,7 @@
   
   <div id="crosshair"></div>
   <div id="fps-counter">FPS: 0</div>
+  <div id="players-counter">Players Online: 1</div>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>
