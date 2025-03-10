@@ -15,13 +15,14 @@ let raycaster;
 let mouse = new THREE.Vector2();
 let leftMouseHeld = false;
 let cursorLocked = false;
-let player; // Player object
+let player = null; // Player object - initialized as null
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
 let orbitLines = []; // Store references to orbit lines
 let clock; // Three.js clock for delta time
 let soundPool = [];
 const MAX_SOUNDS = 5;
 let soundsLoaded = false;
+let gameStarted = false; // Track if game has started
 
 // Textures
 const textures = {};
@@ -112,11 +113,9 @@ function init() {
     // Create camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     
-    // Create player
-    createPlayer();
-    
-    // Position camera behind player
-    updateCameraPosition();
+    // Position camera for menu view (don't create player yet)
+    camera.position.set(0, 30, 100);
+    camera.lookAt(0, 0, 0);
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -649,7 +648,7 @@ function setupEventListeners() {
     
     // Mouse event listeners
     document.addEventListener('mousedown', (event) => {
-        if (event.button === 0 && cursorLocked) { // Left mouse button and cursor is locked
+        if (event.button === 0 && cursorLocked && gameStarted) { // Only shoot if game started
             leftMouseHeld = true;
             shootLaser();
         }
@@ -663,7 +662,7 @@ function setupEventListeners() {
     
     // Mouse movement for camera rotation
     document.addEventListener('mousemove', (event) => {
-        if (cursorLocked) {
+        if (cursorLocked && gameStarted) { // Only rotate if game started
             // Rotate player based on mouse movement
             player.rotation.y -= event.movementX * 0.002;
             
@@ -681,6 +680,13 @@ function setupEventListeners() {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // Add listener for the start button
+    document.addEventListener('pointerlockchange', function() {
+        if (document.pointerLockElement === document.body && !gameStarted) {
+            startGame();
+        }
     });
 }
 
@@ -981,7 +987,7 @@ function createExplosion(parent, targetPos, radius = 1.5) {
 function handleMovement(delta) {
     const moveSpeed = 20 * delta;
     
-    if (cursorLocked) {
+    if (cursorLocked && gameStarted) { // Only move if game started
         // Create a direction vector
         const direction = new THREE.Vector3();
         
@@ -1058,8 +1064,11 @@ function animate() {
     // Get delta time from Three.js clock
     const delta = clock.getDelta();
     
-    // Handle player movement
-    handleMovement(delta);
+    // Only handle player movement if game has started
+    if (gameStarted) {
+        // Handle player movement
+        handleMovement(delta);
+    }
     
     // Update planet positions
     updatePlanets(delta);
@@ -1091,6 +1100,8 @@ function createPlayer() {
 
 // Update camera position based on player position and rotation
 function updateCameraPosition() {
+    if (!player) return; // Don't update if player doesn't exist
+    
     // Calculate camera position based on player position and rotation
     const offset = cameraOffset.clone();
     offset.applyQuaternion(player.quaternion);
@@ -1100,6 +1111,18 @@ function updateCameraPosition() {
     // This ensures the crosshair aligns with where shots will go
     const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion).multiplyScalar(100);
     camera.lookAt(player.position.clone().add(forwardVector));
+}
+
+// New function to start the game
+function startGame() {
+    console.log("Starting game...");
+    gameStarted = true;
+    
+    // Create player now that game is starting
+    createPlayer();
+    
+    // Update camera position to follow player
+    updateCameraPosition();
 }
 
 // Initialize the game when the window loads
