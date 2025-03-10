@@ -147,9 +147,6 @@ function init() {
     // Setup controls
     setupControls();
 
-    // Add an initial direction helper
-    addDirectionHelper();
-
     // Start animation loop
     animate();
     
@@ -938,11 +935,6 @@ function animate() {
     
     // Render the scene
     renderer.render(scene, camera);
-}
-
-// Add temporary direction helper function
-function addDirectionHelper() {
-    // Function is now empty - no direction helper text will be displayed
 }
 
 // Create player function
