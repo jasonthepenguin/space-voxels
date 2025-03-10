@@ -69,6 +69,12 @@ const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
 const PLANET_SIZE_MULTIPLIER = 2;  // Controls overall planet sizes
 const ORBIT_RADIUS_MULTIPLIER = 1.2; // Controls distances between planets
 
+// Ship movement parameters
+const SHIP_SPEED = 15; // Constant forward speed
+const SHIP_TURN_SPEED = 1.5; // How quickly the ship rotates
+const SHIP_PITCH_SPEED = 1.0; // How quickly the ship pitches up/down
+const SHIP_ROLL_SPEED = 1.2; // How quickly the ship rolls
+
 // Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
     { name: 'Mercury', 
@@ -662,15 +668,25 @@ function setupEventListeners() {
         }
     });
     
-    // Mouse movement for camera rotation
+    // Mouse movement for camera rotation only (not ship rotation)
     document.addEventListener('mousemove', (event) => {
-        if (cursorLocked && uiManager.isPlaying()) { // Only rotate if game started
-            // Rotate player based on mouse movement
-            player.rotation.y -= event.movementX * 0.002;
+        if (cursorLocked && uiManager.isPlaying() && player) { // Only rotate camera if game started
+            // Calculate camera offset based on mouse movement
+            // This doesn't affect the ship's rotation, only where the player is looking
+            const cameraYaw = -event.movementX * 0.002;
+            const cameraPitch = -event.movementY * 0.002;
+            
+            // Apply to camera offset angles (stored as properties on the offset vector)
+            if (!cameraOffset.angles) {
+                cameraOffset.angles = { yaw: 0, pitch: 0 };
+            }
+            
+            cameraOffset.angles.yaw += cameraYaw;
             
             // Limit vertical rotation to prevent flipping
-            const verticalRotation = player.rotation.x + event.movementY * 0.002;
-            player.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, verticalRotation));
+            cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
+                                        Math.min(Math.PI/2, 
+                                        cameraOffset.angles.pitch + cameraPitch));
             
             // Update camera position
             updateCameraPosition();
@@ -783,8 +799,8 @@ function shootLaser() {
         }
     }
     
-    // Use camera direction for aiming, but start from player
-    const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    // Use ship's forward direction for shooting, not camera direction
+    const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
     
     // Start the ray from the player position
     const rayOrigin = player.position.clone();
@@ -987,40 +1003,70 @@ function createExplosion(parent, targetPos, radius = 1.5) {
 }
 
 function handleMovement(delta) {
-    const moveSpeed = 20 * delta;
+    if (!cursorLocked || !gameStarted || !player) return; // Only move if game started and player exists
     
-    if (cursorLocked && gameStarted) { // Only move if game started
-        // Create a direction vector
-        const direction = new THREE.Vector3();
+    // Always move forward in the direction the ship is facing
+    const forwardDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
+    player.position.add(forwardDirection.multiplyScalar(SHIP_SPEED * delta));
+    
+    // Handle turning with smooth rotation
+    let targetYawChange = 0;
+    let targetPitchChange = 0;
+    let targetRollChange = 0;
+    
+    // Yaw (left/right turning)
+    if (keyboard['KeyA'] || keyboard['ArrowLeft']) {
+        targetYawChange = SHIP_TURN_SPEED * delta;
+        // Allow continuous rolling when turning left
+        targetRollChange = SHIP_ROLL_SPEED * delta;
+    } else if (keyboard['KeyD'] || keyboard['ArrowRight']) {
+        targetYawChange = -SHIP_TURN_SPEED * delta;
+        // Allow continuous rolling when turning right
+        targetRollChange = -SHIP_ROLL_SPEED * delta;
+    } else {
+        // Return roll to neutral when not turning, but only if within a small range
+        // This allows the ship to stay rolled if the player has done a full roll
+        const normalizedRoll = ((player.rotation.z % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         
-        // Forward/backward movement
-        if (keyboard['KeyW'] || keyboard['ArrowUp']) {
-            direction.z = -1;
-        } else if (keyboard['KeyS'] || keyboard['ArrowDown']) {
-            direction.z = 1;
+        if (normalizedRoll > 0.1 && normalizedRoll < Math.PI) {
+            // If between 0 and PI, roll clockwise toward 0
+            targetRollChange = -SHIP_ROLL_SPEED * delta;
+        } else if (normalizedRoll > Math.PI && normalizedRoll < Math.PI * 2 - 0.1) {
+            // If between PI and 2*PI, roll counter-clockwise toward 0
+            targetRollChange = SHIP_ROLL_SPEED * delta;
         }
-        
-        // Left/right movement
-        if (keyboard['KeyA'] || keyboard['ArrowLeft']) {
-            direction.x = -1;
-        } else if (keyboard['KeyD'] || keyboard['ArrowRight']) {
-            direction.x = 1;
-        }
-        
-        // Normalize the direction vector to prevent faster diagonal movement
-        if (direction.length() > 0) {
-            direction.normalize();
-            
-            // Apply player's rotation to the direction
-            direction.applyQuaternion(player.quaternion);
-            
-            // Move player
-            player.position.add(direction.multiplyScalar(moveSpeed));
-        }
-        
-        // Update camera position
-        updateCameraPosition();
     }
+    
+    // Pitch (up/down) - now allowing for complete loops
+    if (keyboard['KeyW'] || keyboard['ArrowUp']) {
+        targetPitchChange = -SHIP_PITCH_SPEED * delta;
+    } else if (keyboard['KeyS'] || keyboard['ArrowDown']) {
+        targetPitchChange = SHIP_PITCH_SPEED * delta;
+    } else {
+        // Auto-level pitch when not pressing up/down, but only if within a small range
+        // This allows the ship to stay in its orientation if the player has done a loop
+        const normalizedPitch = ((player.rotation.x % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        
+        if (normalizedPitch > 0.1 && normalizedPitch < Math.PI) {
+            // If between 0 and PI, pitch down toward 0
+            targetPitchChange = -SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+        } else if (normalizedPitch > Math.PI && normalizedPitch < Math.PI * 2 - 0.1) {
+            // If between PI and 2*PI, pitch up toward 0
+            targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+        }
+    }
+    
+    // Apply rotations to the ship
+    player.rotation.y += targetYawChange;
+    
+    // Apply pitch without limiting it, allowing for full 360° loops
+    player.rotation.x += targetPitchChange;
+    
+    // Apply roll without limiting it, allowing for full 360° rolls
+    player.rotation.z += targetRollChange;
+    
+    // Update camera position
+    updateCameraPosition();
 }
 
 function updatePlanets(delta) {
@@ -1086,6 +1132,9 @@ function createPlayer() {
     player.position.set(0, 20, 70);
     player.rotation.order = 'YXZ'; // Set rotation order to match camera
     
+    // Initialize camera offset angles
+    cameraOffset.angles = { yaw: 0, pitch: 0 };
+    
     // Materials
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3366cc }); // Blue body
     const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 }); // Gray wings
@@ -1146,15 +1195,51 @@ function createPlayer() {
 function updateCameraPosition() {
     if (!player) return; // Don't update if player doesn't exist
     
-    // Calculate camera position based on player position and rotation
-    const offset = cameraOffset.clone();
-    offset.applyQuaternion(player.quaternion);
-    camera.position.copy(player.position).add(offset);
+    // Create a base offset that follows the ship's orientation
+    // Increased Z from 10 to 15 to move camera further back
+    // Increased Y from 3 to 4 to raise camera slightly for better view
+    const baseOffset = new THREE.Vector3(0, 4, 15);
+    baseOffset.applyQuaternion(player.quaternion);
     
-    // Point camera at player position plus a forward vector
-    // This ensures the crosshair aligns with where shots will go
-    const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion).multiplyScalar(100);
-    camera.lookAt(player.position.clone().add(forwardVector));
+    // Apply additional camera rotation based on mouse movement
+    if (cameraOffset.angles) {
+        // Create a rotation matrix for the additional camera rotation
+        const rotationMatrix = new THREE.Matrix4();
+        
+        // First rotate around Y axis (yaw)
+        rotationMatrix.makeRotationY(cameraOffset.angles.yaw);
+        
+        // Then rotate around X axis (pitch)
+        const pitchMatrix = new THREE.Matrix4();
+        pitchMatrix.makeRotationX(cameraOffset.angles.pitch);
+        rotationMatrix.multiply(pitchMatrix);
+        
+        // Apply the rotation to the base offset
+        baseOffset.applyMatrix4(rotationMatrix);
+    }
+    
+    // Set camera position
+    camera.position.copy(player.position).add(baseOffset);
+    
+    // Instead of looking at the player or far ahead, look at a point slightly above the player
+    // Increased Z from -20 to -30 to look further ahead
+    const lookOffset = new THREE.Vector3(0, 2, -30);
+    lookOffset.applyQuaternion(player.quaternion);
+    
+    // Apply the same camera rotation to the look target
+    if (cameraOffset.angles) {
+        const rotationMatrix = new THREE.Matrix4();
+        
+        rotationMatrix.makeRotationY(cameraOffset.angles.yaw);
+        const pitchMatrix = new THREE.Matrix4();
+        pitchMatrix.makeRotationX(cameraOffset.angles.pitch);
+        rotationMatrix.multiply(pitchMatrix);
+        
+        lookOffset.applyMatrix4(rotationMatrix);
+    }
+    
+    const lookTarget = player.position.clone().add(lookOffset);
+    camera.lookAt(lookTarget);
 }
 
 // New function to start the game
