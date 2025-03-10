@@ -24,6 +24,9 @@ let clock; // Three.js clock for delta time
 const textures = {};
 const textureLoader = new THREE.TextureLoader();
 
+// Add this shared geometry for all voxels
+const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
+
 // Colors for celestial bodies
 const celestialColors = {
     sun: 0xffff88,
@@ -48,8 +51,8 @@ const keyboard = {};
 
 // Global scaling factors
 const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
-const PLANET_SIZE_MULTIPLIER = 2;  // Controls overall planet sizes
-const ORBIT_RADIUS_MULTIPLIER = 1.5; // Controls distances between planets
+const PLANET_SIZE_MULTIPLIER = 5;  // Controls overall planet sizes
+const ORBIT_RADIUS_MULTIPLIER = 2; // Controls distances between planets
 
 // Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
@@ -276,28 +279,51 @@ function createSun() {
     sun.name = "Sun";
     sun.blockDict = {};
     
-    // Create voxel-based sun with emissive material to make it glow
+    // Count voxels first
+    let voxelCount = 0;
     for (let x = -5; x <= 5; x++) {
         for (let y = -5; y <= 5; y++) {
             for (let z = -5; z <= 5; z++) {
                 if (x*x + y*y + z*z <= 25) {
-                    const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
-                    const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                        color: celestialColors.sun,
-                        emissive: 0xffff00,
-                        emissiveIntensity: 0.5
-                    });
-                    const voxel = new THREE.Mesh(voxelGeometry, voxelMaterial);
-                    
-                    voxel.position.set(x, y, z);
-                    sun.add(voxel);
-                    
-                    // Store voxel in dictionary with position as key
-                    sun.blockDict[`${x},${y},${z}`] = voxel;
+                    voxelCount++;
                 }
             }
         }
     }
+    
+    // Create instanced mesh
+    const voxelMaterial = new THREE.MeshStandardMaterial({ 
+        color: celestialColors.sun,
+        emissive: 0xffff00,
+        emissiveIntensity: 0.5
+    });
+    const sunMesh = new THREE.InstancedMesh(voxelGeometry, voxelMaterial, voxelCount);
+    
+    // Set positions for each instance
+    const matrix = new THREE.Matrix4();
+    let index = 0;
+    
+    for (let x = -5; x <= 5; x++) {
+        for (let y = -5; y <= 5; y++) {
+            for (let z = -5; z <= 5; z++) {
+                if (x*x + y*y + z*z <= 25) {
+                    matrix.setPosition(x, y, z);
+                    sunMesh.setMatrixAt(index, matrix);
+                    
+                    // Store voxel index in dictionary with position as key
+                    sun.blockDict[`${x},${y},${z}`] = index;
+                    
+                    index++;
+                }
+            }
+        }
+    }
+    
+    // Update the instance matrix buffer
+    sunMesh.instanceMatrix.needsUpdate = true;
+    
+    sun.add(sunMesh);
+    sun.instancedMesh = sunMesh; // Store reference to the instanced mesh
     
     scene.add(sun);
 }
@@ -317,96 +343,129 @@ function createPlanets() {
         const voxelRange = Math.floor(data.size) + 1;
         const maxDistance = data.size * data.size;
         
-        // Create voxel-based planet
+        // Count voxels first
+        let voxelCount = 0;
         for (let x = -voxelRange; x <= voxelRange; x++) {
             for (let y = -voxelRange; y <= voxelRange; y++) {
                 for (let z = -voxelRange; z <= voxelRange; z++) {
                     if (x*x + y*y + z*z <= maxDistance) {
-                        // Determine if this is an outer block
-                        let isOuterBlock = false;
-                        for (const [dx, dy, dz] of [[1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1]]) {
-                            const nx = x + dx;
-                            const ny = y + dy;
-                            const nz = z + dz;
-                            if (nx*nx + ny*ny + nz*nz > maxDistance) {
-                                isOuterBlock = true;
-                                break;
-                            }
-                        }
-                        
-                        // Select color and emission color based on planet type
-                        let voxelColor;
-                        let emissiveColor;
-                        
-                        if (data.name === 'Earth') {
-                            // Earth special case
-                            voxelColor = Math.random() < 0.7 ? celestialColors.earthWater : celestialColors.earthLand;
-                            emissiveColor = Math.random() < 0.7 ? 0x0033ff : 0x00ff33; // Blue or green glow
-                        } else if (data.name === 'Jupiter') {
-                            // Jupiter banded appearance
-                            const band = (y + voxelRange) % 3;
-                            if (band === 0) {
-                                voxelColor = celestialColors.jupiterOrange;
-                                emissiveColor = 0xff8800;
-                            } else if (band === 1) {
-                                voxelColor = celestialColors.jupiterYellow;
-                                emissiveColor = 0xffff00;
-                            } else {
-                                voxelColor = celestialColors.jupiterRed;
-                                emissiveColor = 0xff4400;
-                            }
-                        } else if (data.name === 'Saturn') {
-                            // Saturn banded appearance
-                            const band = (y + voxelRange) % 2;
-                            voxelColor = band === 0 ? celestialColors.saturnYellow : celestialColors.saturnOrange;
-                            emissiveColor = band === 0 ? 0xffff00 : 0xff8800;
-                        } else if (data.name === 'Venus') {
-                            // Venus cloud patterns
-                            const patternValue = (x + y + z) % 4;
-                            if (patternValue === 0) {
-                                voxelColor = celestialColors.saturnYellow;
-                                emissiveColor = 0xffff00;
-                            } else if (patternValue === 1) {
-                                voxelColor = celestialColors.jupiterOrange;
-                                emissiveColor = 0xff8800;
-                            } else if (patternValue === 2) {
-                                voxelColor = celestialColors.saturnYellow;
-                                emissiveColor = 0xffffaa;
-                            } else {
-                                voxelColor = celestialColors.moon;
-                                emissiveColor = 0xffffff;
-                            }
-                        } else if (data.name === 'Mars') {
-                            voxelColor = celestialColors.mars;
-                            emissiveColor = 0xff4400;
-                        } else if (data.name === 'Mercury') {
-                            voxelColor = celestialColors.mercury;
-                            emissiveColor = 0x888888;
-                        } else if (data.name === 'Uranus') {
-                            voxelColor = celestialColors.uranus;
-                            emissiveColor = 0x00ccff;
-                        } else if (data.name === 'Neptune') {
-                            voxelColor = celestialColors.neptune;
-                            emissiveColor = 0x0066ff;
-                        }
-                        
-                        const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
-                        const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                            color: voxelColor,
-                            emissive: emissiveColor,  // Add emissive glow to planets
-                            emissiveIntensity: 0.3    // Not as bright as the sun
-                        });
-                        const voxel = new THREE.Mesh(voxelGeometry, voxelMaterial);
-                        
-                        voxel.position.set(x, y, z);
-                        planet.add(voxel);
-                        
-                        // Store voxel in dictionary
-                        planet.blockDict[`${x},${y},${z}`] = voxel;
+                        voxelCount++;
                     }
                 }
             }
         }
+        
+        // Create instanced mesh with appropriate material
+        let planetMaterial;
+        
+        if (data.name === 'Earth') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                emissive: 0x003366,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Jupiter') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                emissive: 0xff8800,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Saturn') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                emissive: 0xff8800,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Venus') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                emissive: 0xffff00,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Mars') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                color: celestialColors.mars,
+                emissive: 0xff4400,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Mercury') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                color: celestialColors.mercury,
+                emissive: 0x888888,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Uranus') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                color: celestialColors.uranus,
+                emissive: 0x00ccff,
+                emissiveIntensity: 0.3
+            });
+        } else if (data.name === 'Neptune') {
+            planetMaterial = new THREE.MeshStandardMaterial({ 
+                color: celestialColors.neptune,
+                emissive: 0x0066ff,
+                emissiveIntensity: 0.3
+            });
+        }
+        
+        const planetMesh = new THREE.InstancedMesh(voxelGeometry, planetMaterial, voxelCount);
+        
+        // For planets that need different colors per voxel
+        let useInstanceColors = ['Earth', 'Jupiter', 'Saturn', 'Venus'].includes(data.name);
+        if (useInstanceColors) {
+            planetMesh.instanceColor = new THREE.InstancedBufferAttribute(
+                new Float32Array(voxelCount * 3), 3
+            );
+        }
+        
+        // Set positions and colors for each instance
+        const matrix = new THREE.Matrix4();
+        const color = new THREE.Color();
+        let index = 0;
+        
+        for (let x = -voxelRange; x <= voxelRange; x++) {
+            for (let y = -voxelRange; y <= voxelRange; y++) {
+                for (let z = -voxelRange; z <= voxelRange; z++) {
+                    if (x*x + y*y + z*z <= maxDistance) {
+                        // Set position
+                        matrix.setPosition(x, y, z);
+                        planetMesh.setMatrixAt(index, matrix);
+                        
+                        // Set color if needed
+                        if (useInstanceColors) {
+                            if (data.name === 'Earth') {
+                                color.set(Math.random() < 0.7 ? celestialColors.earthWater : celestialColors.earthLand);
+                            } else if (data.name === 'Jupiter') {
+                                const band = (y + voxelRange) % 3;
+                                if (band === 0) color.set(celestialColors.jupiterOrange);
+                                else if (band === 1) color.set(celestialColors.jupiterYellow);
+                                else color.set(celestialColors.jupiterRed);
+                            } else if (data.name === 'Saturn') {
+                                const band = (y + voxelRange) % 2;
+                                color.set(band === 0 ? celestialColors.saturnYellow : celestialColors.saturnOrange);
+                            } else if (data.name === 'Venus') {
+                                const patternValue = (x + y + z) % 4;
+                                if (patternValue === 0) color.set(celestialColors.saturnYellow);
+                                else if (patternValue === 1) color.set(celestialColors.jupiterOrange);
+                                else if (patternValue === 2) color.set(celestialColors.saturnYellow);
+                                else color.set(celestialColors.moon);
+                            }
+                            planetMesh.setColorAt(index, color);
+                        }
+                        
+                        // Store voxel index in dictionary with position as key
+                        planet.blockDict[`${x},${y},${z}`] = index;
+                        
+                        index++;
+                    }
+                }
+            }
+        }
+        
+        // Update the instance buffers
+        planetMesh.instanceMatrix.needsUpdate = true;
+        if (useInstanceColors) {
+            planetMesh.instanceColor.needsUpdate = true;
+        }
+        
+        planet.add(planetMesh);
+        planet.instancedMesh = planetMesh; // Store reference to the instanced mesh
         
         // Add Saturn's rings if this is Saturn
         if (data.name === 'Saturn') {
@@ -443,32 +502,56 @@ function createOrbitLines() {
 }
 
 function createSaturnRings(planet, planetSize) {
-    const ringRadius = 6 * (planetSize / 3.5); // Scale ring radius with planet size
-    const ringThickness = 0.5 * (planetSize / 3.5); // Scale thickness with planet size
+    const ringRadius = 6 * (planetSize / 3.5);
+    const ringThickness = 0.5 * (planetSize / 3.5);
     
     planet.ringDict = {};
     
-    // Create flat disc for rings
+    // Count ring voxels first
+    let ringVoxelCount = 0;
     for (let x = -ringRadius; x <= ringRadius; x++) {
         for (let z = -ringRadius; z <= ringRadius; z++) {
             const distanceFromCenter = Math.sqrt(x*x + z*z);
             if (4 * (planetSize / 3.5) <= distanceFromCenter && distanceFromCenter <= ringRadius) {
-                const voxelGeometry = new THREE.BoxGeometry(1, ringThickness, 1);
-                const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                    color: celestialColors.saturnOrange,
-                    emissive: 0xff8800,  // Make rings glow orange
-                    emissiveIntensity: 0.3
-                });
-                const ringVoxel = new THREE.Mesh(voxelGeometry, voxelMaterial);
-                
-                ringVoxel.position.set(x, 0, z);
-                planet.add(ringVoxel);
-                
-                // Store ring voxel in dictionary
-                planet.ringDict[`${x},0,${z}`] = ringVoxel;
+                ringVoxelCount++;
             }
         }
     }
+    
+    // Create instanced mesh for rings
+    const ringMaterial = new THREE.MeshStandardMaterial({ 
+        color: celestialColors.saturnOrange,
+        emissive: 0xff8800,
+        emissiveIntensity: 0.3
+    });
+    
+    const ringGeometry = new THREE.BoxGeometry(1, ringThickness, 1);
+    const ringMesh = new THREE.InstancedMesh(ringGeometry, ringMaterial, ringVoxelCount);
+    
+    // Set positions for each instance
+    const matrix = new THREE.Matrix4();
+    let index = 0;
+    
+    for (let x = -ringRadius; x <= ringRadius; x++) {
+        for (let z = -ringRadius; z <= ringRadius; z++) {
+            const distanceFromCenter = Math.sqrt(x*x + z*z);
+            if (4 * (planetSize / 3.5) <= distanceFromCenter && distanceFromCenter <= ringRadius) {
+                matrix.setPosition(x, 0, z);
+                ringMesh.setMatrixAt(index, matrix);
+                
+                // Store ring voxel index in dictionary
+                planet.ringDict[`${x},0,${z}`] = index;
+                
+                index++;
+            }
+        }
+    }
+    
+    // Update the instance matrix buffer
+    ringMesh.instanceMatrix.needsUpdate = true;
+    
+    planet.add(ringMesh);
+    planet.ringInstancedMesh = ringMesh; // Store reference to the ring instanced mesh
 }
 
 function createMoon() {
@@ -480,7 +563,7 @@ function createMoon() {
         moon.name = 'Moon';
         moon.parent = earth;
         moon.position.set(5, 0, 0);
-        moon.rotationSpeed = 0.08; // Already increased from 0.02 to 0.08 (4x faster)
+        moon.rotationSpeed = 0.08;
         moon.rotationAngle = 0;
         moon.blockDict = {};
         
@@ -488,40 +571,52 @@ function createMoon() {
         const moonVoxelRange = Math.floor(moonSize) + 1;
         const moonMaxDistance = moonSize * moonSize;
         
-        // Create voxel-based moon
+        // Count moon voxels first
+        let moonVoxelCount = 0;
         for (let x = -moonVoxelRange; x <= moonVoxelRange; x++) {
             for (let y = -moonVoxelRange; y <= moonVoxelRange; y++) {
                 for (let z = -moonVoxelRange; z <= moonVoxelRange; z++) {
                     if (x*x + y*y + z*z <= moonMaxDistance) {
-                        // Determine if outer block
-                        let isOuterBlock = false;
-                        for (const [dx, dy, dz] of [[1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1]]) {
-                            const nx = x + dx;
-                            const ny = y + dy;
-                            const nz = z + dz;
-                            if (nx*nx + ny*ny + nz*nz > moonMaxDistance) {
-                                isOuterBlock = true;
-                                break;
-                            }
-                        }
-                        
-                        const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
-                        const voxelMaterial = new THREE.MeshStandardMaterial({ 
-                            color: celestialColors.moon,
-                            emissive: 0xaaaaaa,       // Soft white glow
-                            emissiveIntensity: 0.2    // Slightly dimmer than planets
-                        });
-                        const voxel = new THREE.Mesh(voxelGeometry, voxelMaterial);
-                        
-                        voxel.position.set(x, y, z);
-                        moon.add(voxel);
-                        
-                        // Store voxel in dictionary
-                        moon.blockDict[`${x},${y},${z}`] = voxel;
+                        moonVoxelCount++;
                     }
                 }
             }
         }
+        
+        // Create instanced mesh for moon
+        const moonMaterial = new THREE.MeshStandardMaterial({ 
+            color: celestialColors.moon,
+            emissive: 0xaaaaaa,
+            emissiveIntensity: 0.2
+        });
+        
+        const moonMesh = new THREE.InstancedMesh(voxelGeometry, moonMaterial, moonVoxelCount);
+        
+        // Set positions for each instance
+        const matrix = new THREE.Matrix4();
+        let index = 0;
+        
+        for (let x = -moonVoxelRange; x <= moonVoxelRange; x++) {
+            for (let y = -moonVoxelRange; y <= moonVoxelRange; y++) {
+                for (let z = -moonVoxelRange; z <= moonVoxelRange; z++) {
+                    if (x*x + y*y + z*z <= moonMaxDistance) {
+                        matrix.setPosition(x, y, z);
+                        moonMesh.setMatrixAt(index, matrix);
+                        
+                        // Store voxel index in dictionary
+                        moon.blockDict[`${x},${y},${z}`] = index;
+                        
+                        index++;
+                    }
+                }
+            }
+        }
+        
+        // Update the instance matrix buffer
+        moonMesh.instanceMatrix.needsUpdate = true;
+        
+        moon.add(moonMesh);
+        moon.instancedMesh = moonMesh; // Store reference to the instanced mesh
         
         earth.add(moon);
         earth.moon = moon;
@@ -703,7 +798,7 @@ function shootLaser() {
         ignoreList.push(line);
     });
     
-    let targetPoint, targetObject;
+    let targetPoint, targetObject, targetParent;
     if (intersects.length > 0) {
         // Filter out objects to ignore and anything too close to the player
         const filteredIntersects = intersects.filter(intersect => {
@@ -726,15 +821,26 @@ function shootLaser() {
             // Hit something valid
             targetPoint = filteredIntersects[0].point;
             targetObject = filteredIntersects[0].object;
+            
+            // Find the parent group (sun, planet, or moon)
+            if (targetObject.isInstancedMesh) {
+                // If we hit an instanced mesh directly
+                targetParent = targetObject.parent;
+            } else {
+                // Otherwise use the parent
+                targetParent = targetObject.parent;
+            }
         } else {
             // Nothing valid hit, shoot into distance
             targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
             targetObject = null;
+            targetParent = null;
         }
     } else {
         // Nothing hit, shoot into distance
         targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
         targetObject = null;
+        targetParent = null;
     }
     
     // Get a laser from the pool
@@ -767,25 +873,28 @@ function shootLaser() {
         }, 200);
         
         // Create explosion
-        if (targetObject.parent && 
-            (targetObject.parent === sun || 
-             planets.includes(targetObject.parent) || 
-             planets.some(p => p.moon && targetObject.parent === p.moon))) {
+        if (targetParent && 
+            (targetParent === sun || 
+             planets.includes(targetParent) || 
+             planets.some(p => p.moon && targetParent === p.moon))) {
+            
+            // Convert world coordinates to local coordinates for the explosion
+            const localPoint = targetParent.worldToLocal(targetPoint.clone());
+            
             setTimeout(() => {
-                createExplosion(targetObject);
+                createExplosion(targetParent, localPoint);
             }, 300);
         }
     }
 }
 
-function createExplosion(targetObject, radius = 1.5) {
-    // Get the parent entity (planet, sun, or moon)
-    const parent = targetObject.parent;
+function createExplosion(parent, targetPos, radius = 1.5) {
+    // If the parent doesn't have an instancedMesh, it's not a voxel-based object
+    if (!parent.instancedMesh && !parent.ringInstancedMesh) {
+        return;
+    }
     
-    // Get the position of the target in local space
-    const targetPos = targetObject.position.clone();
-    
-    // List of blocks to destroy
+    // List of blocks to destroy (by index)
     const blocksToDestroy = [];
     
     // Check blocks in parent's blockDict
@@ -794,11 +903,12 @@ function createExplosion(targetObject, radius = 1.5) {
             for (let y = Math.floor(targetPos.y - radius); y <= Math.ceil(targetPos.y + radius); y++) {
                 for (let z = Math.floor(targetPos.z - radius); z <= Math.ceil(targetPos.z + radius); z++) {
                     const key = `${x},${y},${z}`;
-                    if (parent.blockDict[key]) {
-                        const block = parent.blockDict[key];
-                        const distance = block.position.distanceTo(targetPos);
+                    if (parent.blockDict[key] !== undefined) {
+                        const blockIndex = parent.blockDict[key];
+                        const blockPos = new THREE.Vector3(x, y, z);
+                        const distance = blockPos.distanceTo(targetPos);
                         if (distance <= radius) {
-                            blocksToDestroy.push(block);
+                            blocksToDestroy.push(blockIndex);
                             delete parent.blockDict[key];
                         }
                     }
@@ -813,11 +923,12 @@ function createExplosion(targetObject, radius = 1.5) {
             for (let y = Math.floor(targetPos.y - radius); y <= Math.ceil(targetPos.y + radius); y++) {
                 for (let z = Math.floor(targetPos.z - radius); z <= Math.ceil(targetPos.z + radius); z++) {
                     const key = `${x},${y},${z}`;
-                    if (parent.ringDict[key]) {
-                        const block = parent.ringDict[key];
-                        const distance = block.position.distanceTo(targetPos);
+                    if (parent.ringDict[key] !== undefined) {
+                        const blockIndex = parent.ringDict[key];
+                        const blockPos = new THREE.Vector3(x, y, z);
+                        const distance = blockPos.distanceTo(targetPos);
                         if (distance <= radius) {
-                            blocksToDestroy.push(block);
+                            blocksToDestroy.push(blockIndex);
                             delete parent.ringDict[key];
                         }
                     }
@@ -826,10 +937,31 @@ function createExplosion(targetObject, radius = 1.5) {
         }
     }
     
-    // Destroy all blocks
-    blocksToDestroy.forEach(block => {
-        parent.remove(block);
-    });
+    // Hide destroyed blocks by moving them far away
+    const matrix = new THREE.Matrix4();
+    matrix.setPosition(1000, 1000, 1000); // Move far away
+    
+    // Apply to main instanced mesh
+    if (parent.instancedMesh) {
+        blocksToDestroy.forEach(index => {
+            parent.instancedMesh.setMatrixAt(index, matrix);
+        });
+        
+        if (blocksToDestroy.length > 0) {
+            parent.instancedMesh.instanceMatrix.needsUpdate = true;
+        }
+    }
+    
+    // Apply to ring instanced mesh if it exists
+    if (parent.ringInstancedMesh) {
+        blocksToDestroy.forEach(index => {
+            parent.ringInstancedMesh.setMatrixAt(index, matrix);
+        });
+        
+        if (blocksToDestroy.length > 0) {
+            parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
+        }
+    }
 }
 
 function handleMovement(delta) {
