@@ -116,6 +116,9 @@ function init() {
     // Position camera for menu view (don't create player yet)
     camera.position.set(0, 30, 100);
     camera.lookAt(0, 0, 0);
+    
+    // Expose camera to window object for UI animations
+    window.threeCamera = camera;
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -244,19 +247,27 @@ function handlePointerLockChange() {
         // Pointer is locked
         cursorLocked = true;
         document.getElementById('crosshair').style.display = 'block';
-        // Hide instructions when cursor is locked
-        const instructions = document.getElementById('instructions');
-        if (instructions) {
-            instructions.classList.add('hidden');
+        
+        // Hide all menu UIs when game starts
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('ship-builder-ui').style.display = 'none';
+        
+        // Start the game if not already started
+        if (!gameStarted) {
+            startGame();
         }
     } else {
         // Pointer is unlocked
         cursorLocked = false;
         document.getElementById('crosshair').style.display = 'none';
-        // Show instructions when cursor is unlocked
-        const instructions = document.getElementById('instructions');
-        if (instructions) {
-            instructions.classList.remove('hidden');
+        
+        // Only show instructions when cursor is unlocked and game was started
+        // (don't show it if we're in ship builder)
+        if (gameStarted) {
+            const shipBuilderVisible = document.getElementById('ship-builder-ui').style.display === 'block';
+            if (!shipBuilderVisible) {
+                document.getElementById('instructions').style.display = 'block';
+            }
         }
     }
 }
@@ -1060,6 +1071,11 @@ function animate() {
     if (gameStarted) {
         // Handle player movement
         handleMovement(delta);
+        
+        // Update camera position only if we're not in a menu animation
+        if (!window.cameraAnimating) {
+            updateCameraPosition();
+        }
     }
     
     // Update planet positions
@@ -1109,6 +1125,10 @@ function updateCameraPosition() {
 function startGame() {
     console.log("Starting game...");
     gameStarted = true;
+    
+    // Hide all menu UIs
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('ship-builder-ui').style.display = 'none';
     
     // Create player now that game is starting
     createPlayer();
