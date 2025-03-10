@@ -47,16 +47,52 @@ const celestialColors = {
 // Keyboard state
 const keyboard = {};
 
+// Global scaling factors
+const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
+const PLANET_SIZE_MULTIPLIER = 1;  // Controls overall planet sizes
+const ORBIT_RADIUS_MULTIPLIER = 1; // Controls distances between planets
+
 // Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
-    { name: 'Mercury', size: 1, orbitRadius: 12, orbitSpeed: 0.04 * 3 * 4 },
-    { name: 'Venus', size: 2, orbitRadius: 16, orbitSpeed: 0.015 * 3 * 4 },
-    { name: 'Earth', size: 2, orbitRadius: 22, orbitSpeed: 0.01 * 3 * 4 },
-    { name: 'Mars', size: 1.5, orbitRadius: 28, orbitSpeed: 0.008 * 3 * 4 },
-    { name: 'Jupiter', size: 4, orbitRadius: 40, orbitSpeed: 0.002 * 3 * 4 },
-    { name: 'Saturn', size: 3.5, orbitRadius: 55, orbitSpeed: 0.0015 * 3 * 4 },
-    { name: 'Uranus', size: 3, orbitRadius: 70, orbitSpeed: 0.001 * 3 * 4 },
-    { name: 'Neptune', size: 3, orbitRadius: 85, orbitSpeed: 0.0008 * 3 * 4 }
+    { name: 'Mercury', 
+      size: 1 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 12 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.04 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Venus', 
+      size: 2 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 16 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.015 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Earth', 
+      size: 2 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 22 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.01 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Mars', 
+      size: 1.5 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 28 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.008 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Jupiter', 
+      size: 4 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 40 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.002 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Saturn', 
+      size: 3.5 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 55 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.0015 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Uranus', 
+      size: 3 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 70 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.001 * ORBIT_SPEED_MULTIPLIER },
+    
+    { name: 'Neptune', 
+      size: 3 * PLANET_SIZE_MULTIPLIER, 
+      orbitRadius: 85 * ORBIT_RADIUS_MULTIPLIER, 
+      orbitSpeed: 0.0008 * ORBIT_SPEED_MULTIPLIER }
 ];
 
 // Initialize the game
