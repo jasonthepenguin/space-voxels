@@ -623,8 +623,8 @@ function getFlashFromPool() {
 function shootLaser() {
     // Play sound if available, otherwise skip it
     try {
-        const shootSound = new Audio('./js/textures/shoot.mp3');
-        shootSound.currentTime = 1.1;
+        const shootSound = new Audio('./js/sounds/laser_sound_3.wav');
+        shootSound.currentTime = 0; // Start from beginning since we're using a new sound file
         shootSound.play().catch(e => {
             console.warn('Could not play shoot sound: ', e);
         });
