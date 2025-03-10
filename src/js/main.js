@@ -1016,14 +1016,6 @@ function handleMovement(delta) {
             player.position.add(direction.multiplyScalar(moveSpeed));
         }
         
-        // Up/down movement
-        if (keyboard['Space']) {
-            player.position.y += moveSpeed;
-        }
-        if (keyboard['ShiftLeft'] || keyboard['ShiftRight']) {
-            player.position.y -= moveSpeed;
-        }
-        
         // Update camera position
         updateCameraPosition();
     }
