@@ -633,21 +633,6 @@ function setupEventListeners() {
     document.addEventListener('keydown', (event) => {
         keyboard[event.code] = true;
         
-        // Toggle cursor lock with 'P' key
-        if (event.code === 'KeyP') {
-            if (cursorLocked) {
-                document.exitPointerLock = document.exitPointerLock || 
-                                          document.mozExitPointerLock ||
-                                          document.webkitExitPointerLock;
-                document.exitPointerLock();
-            } else {
-                document.body.requestPointerLock = document.body.requestPointerLock || 
-                                                  document.body.mozRequestPointerLock ||
-                                                  document.body.webkitRequestPointerLock;
-                document.body.requestPointerLock();
-            }
-        }
-        
         // Quit with Escape key
         if (event.code === 'Escape') {
             // In a web context, we can't truly "quit", but we can unlock controls
