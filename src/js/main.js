@@ -20,6 +20,7 @@ let cursorLocked = false;
 let player; // Player object
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
 let orbitLines = []; // Store references to orbit lines
+let clock; // Three.js clock for delta time
 
 // Textures
 const textures = {};
@@ -101,6 +102,9 @@ function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
 
+    // Initialize clock
+    clock = new THREE.Clock();
+    
     // Create camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     
@@ -919,7 +923,8 @@ function handleAutoFire(delta) {
 function animate() {
     requestAnimationFrame(animate);
     
-    const delta = 1/60; // Fixed timestep for consistent behavior
+    // Get delta time from Three.js clock
+    const delta = clock.getDelta();
     
     // Handle player movement
     handleMovement(delta);
