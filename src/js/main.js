@@ -632,15 +632,14 @@ function shootLaser() {
         console.warn('Error with audio: ', e);
     }
     
-    // Create the ray from a position much further in front of the player
-    const direction = new THREE.Vector3(0, 0, -1);
-    direction.applyQuaternion(player.quaternion);
+    // Use camera direction for aiming, but start from player
+    const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     
-    // Start the ray 5 units in front of the player to completely avoid self-intersection
-    const rayOrigin = player.position.clone().add(direction.clone().multiplyScalar(5));
+    // Start the ray from the player position
+    const rayOrigin = player.position.clone();
     
-    // Add a slight upward offset to the ray origin to avoid hitting the player from above
-    rayOrigin.y += 1;
+    // Add a slight forward offset to avoid self-intersection
+    rayOrigin.add(direction.clone().multiplyScalar(3));
     
     raycaster.set(rayOrigin, direction);
     
@@ -935,12 +934,10 @@ function updateCameraPosition() {
     offset.applyQuaternion(player.quaternion);
     camera.position.copy(player.position).add(offset);
     
-    // Make camera look at a point far in front of the player to improve aiming
-    // This creates a better alignment between the crosshair and where shots will go
-    const lookTarget = player.position.clone().add(
-        new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion).multiplyScalar(50)
-    );
-    camera.lookAt(lookTarget);
+    // Point camera at player position plus a forward vector
+    // This ensures the crosshair aligns with where shots will go
+    const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion).multiplyScalar(100);
+    camera.lookAt(player.position.clone().add(forwardVector));
 }
 
 // Initialize the game when the window loads
