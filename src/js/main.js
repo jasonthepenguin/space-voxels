@@ -1081,20 +1081,65 @@ function animate() {
 
 // Create player function
 function createPlayer() {
-    // Create a simple gray block for the player
-    const playerGeometry = new THREE.BoxGeometry(2, 2, 2);
-    const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    player = new THREE.Mesh(playerGeometry, playerMaterial);
-    player.position.set(0, 20, 70); // Much lower position
+    // Create a group to hold all spaceship parts
+    player = new THREE.Group();
+    player.position.set(0, 20, 70);
     player.rotation.order = 'YXZ'; // Set rotation order to match camera
-    scene.add(player);
     
-    // Add a small indicator to show which way is forward
-    const indicatorGeometry = new THREE.BoxGeometry(0.5, 0.5, 1);
-    const indicatorMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
-    indicator.position.set(0, 0, -1.5); // Position it at the front of the player
-    player.add(indicator);
+    // Materials
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3366cc }); // Blue body
+    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 }); // Gray wings
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333 }); // Red accents
+    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x66ccff, 
+        transparent: true, 
+        opacity: 0.7 
+    }); // Transparent blue cockpit
+    
+    // Main body - slightly elongated
+    const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    player.add(body);
+    
+    // Cockpit - on top front
+    const cockpitGeometry = new THREE.BoxGeometry(1, 0.7, 1.2);
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.8, -0.8);
+    player.add(cockpit);
+    
+    // Wings - on sides
+    const wingGeometry = new THREE.BoxGeometry(4, 0.3, 2);
+    
+    // Left wing
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    leftWing.position.set(-2, -0.2, 0);
+    player.add(leftWing);
+    
+    // Right wing
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    rightWing.position.set(2, -0.2, 0);
+    player.add(rightWing);
+    
+    // Engine blocks - at the back
+    const engineGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    
+    // Left engine
+    const leftEngine = new THREE.Mesh(engineGeometry, accentMaterial);
+    leftEngine.position.set(-0.8, -0.1, 1.8);
+    player.add(leftEngine);
+    
+    // Right engine
+    const rightEngine = new THREE.Mesh(engineGeometry, accentMaterial);
+    rightEngine.position.set(0.8, -0.1, 1.8);
+    player.add(rightEngine);
+    
+    // Forward gun/cannon
+    const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
+    const gun = new THREE.Mesh(gunGeometry, accentMaterial);
+    gun.position.set(0, 0, -2.5);
+    player.add(gun);
+    
+    scene.add(player);
 }
 
 // Update camera position based on player position and rotation
