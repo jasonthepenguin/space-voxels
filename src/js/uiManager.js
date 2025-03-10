@@ -32,6 +32,9 @@ class UIManager {
         this.frameCount = 0;
         this.lastTime = performance.now();
         
+        // Animation flag to prevent multiple animations
+        this.isAnimating = false;
+        
         // Initialize
         this.setupEventListeners();
         this.startFPSCounter();
@@ -98,7 +101,7 @@ class UIManager {
         
         // Ship builder button
         this.shipBuilderButton.addEventListener('click', () => {
-            if (this.camera && this.currentState === GameState.MAIN_MENU) {
+            if (this.camera && this.currentState === GameState.MAIN_MENU && !this.isAnimating) {
                 this.startCameraRotation(180, () => {
                     this.changeState(GameState.SHIP_BUILDER);
                 });
@@ -107,7 +110,7 @@ class UIManager {
         
         // Return button
         this.returnButton.addEventListener('click', () => {
-            if (this.camera && this.currentState === GameState.SHIP_BUILDER) {
+            if (this.camera && this.currentState === GameState.SHIP_BUILDER && !this.isAnimating) {
                 this.startCameraRotation(180, () => {
                     this.changeState(GameState.MAIN_MENU);
                 });
@@ -157,8 +160,13 @@ class UIManager {
             return;
         }
         
-        // Set flag to prevent camera updates from game logic
+        // Set animation flags to prevent multiple animations
+        this.isAnimating = true;
         window.cameraAnimating = true;
+        
+        // Disable buttons during animation
+        if (this.shipBuilderButton) this.shipBuilderButton.disabled = true;
+        if (this.returnButton) this.returnButton.disabled = true;
         
         const startRotation = this.camera.rotation.y;
         const endRotation = startRotation + (targetAngle * Math.PI / 180);
@@ -181,6 +189,12 @@ class UIManager {
             } else {
                 // Animation complete
                 window.cameraAnimating = false;
+                this.isAnimating = false;
+                
+                // Re-enable buttons
+                if (this.shipBuilderButton) this.shipBuilderButton.disabled = false;
+                if (this.returnButton) this.returnButton.disabled = false;
+                
                 if (callback) callback();
             }
         };
