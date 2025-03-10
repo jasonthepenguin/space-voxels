@@ -12,10 +12,8 @@ let flashPool = [];
 const MAX_FLASHES = 10;
 let crosshair;
 let raycaster;
-let mouse;
+let mouse = new THREE.Vector2();
 let leftMouseHeld = false;
-let timeSinceLastShot = 0;
-const AUTO_FIRE_DELAY = 0.3;
 let cursorLocked = false;
 let player; // Player object
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
@@ -51,7 +49,7 @@ const keyboard = {};
 // Global scaling factors
 const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
 const PLANET_SIZE_MULTIPLIER = 2;  // Controls overall planet sizes
-const ORBIT_RADIUS_MULTIPLIER = 1; // Controls distances between planets
+const ORBIT_RADIUS_MULTIPLIER = 1.5; // Controls distances between planets
 
 // Planet data: name, size, orbit_radius, orbit_speed
 const planetData = [
@@ -143,7 +141,6 @@ function init() {
 
     // Initialize raycaster for laser shooting
     raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
 
     // Setup event listeners
     setupEventListeners();
@@ -909,17 +906,6 @@ function updateLasers(delta) {
     }
 }
 
-function handleAutoFire(delta) {
-    // Auto-fire when holding left mouse button
-    if (leftMouseHeld && cursorLocked) {
-        timeSinceLastShot += delta;
-        if (timeSinceLastShot >= AUTO_FIRE_DELAY) {
-            timeSinceLastShot = 0;
-            shootLaser();
-        }
-    }
-}
-
 function animate() {
     requestAnimationFrame(animate);
     
@@ -934,9 +920,6 @@ function animate() {
     
     // Update lasers
     updateLasers(delta);
-    
-    // Handle auto-fire
-    handleAutoFire(delta);
     
     // Render the scene
     renderer.render(scene, camera);
