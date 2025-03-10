@@ -50,7 +50,7 @@ const keyboard = {};
 
 // Global scaling factors
 const ORBIT_SPEED_MULTIPLIER = 12; // This replaces the 3*4 factor
-const PLANET_SIZE_MULTIPLIER = 1;  // Controls overall planet sizes
+const PLANET_SIZE_MULTIPLIER = 2;  // Controls overall planet sizes
 const ORBIT_RADIUS_MULTIPLIER = 1; // Controls distances between planets
 
 // Planet data: name, size, orbit_radius, orbit_speed
@@ -446,8 +446,8 @@ function createOrbitLines() {
 }
 
 function createSaturnRings(planet, planetSize) {
-    const ringRadius = 6;
-    const ringThickness = 0.5;
+    const ringRadius = 6 * (planetSize / 3.5); // Scale ring radius with planet size
+    const ringThickness = 0.5 * (planetSize / 3.5); // Scale thickness with planet size
     
     planet.ringDict = {};
     
@@ -455,7 +455,7 @@ function createSaturnRings(planet, planetSize) {
     for (let x = -ringRadius; x <= ringRadius; x++) {
         for (let z = -ringRadius; z <= ringRadius; z++) {
             const distanceFromCenter = Math.sqrt(x*x + z*z);
-            if (4 <= distanceFromCenter && distanceFromCenter <= ringRadius) {
+            if (4 * (planetSize / 3.5) <= distanceFromCenter && distanceFromCenter <= ringRadius) {
                 const voxelGeometry = new THREE.BoxGeometry(1, ringThickness, 1);
                 const voxelMaterial = new THREE.MeshStandardMaterial({ 
                     color: celestialColors.saturnOrange,
