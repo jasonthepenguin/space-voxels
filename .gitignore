@@ -1,14 +1,9 @@
-# Ignore MP3 audio files
-*.mp3
 
-# Ignore PNG image files
-*.png
 
 # ignore python env folder
 env/
 
 
-textures/
 
 
 node_modules/
