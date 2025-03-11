@@ -25,6 +25,15 @@ const MAX_SOUNDS = 5;
 let soundsLoaded = false;
 let gameStarted = false; // Track if game has started
 
+// Import textures and sounds using ES modules
+import skyboxRightUrl from '../assets/textures/skybox_right.png';
+import skyboxLeftUrl from '../assets/textures/skybox_left.png';
+import skyboxTopUrl from '../assets/textures/skybox_top.png';
+import skyboxBottomUrl from '../assets/textures/skybox_bottom.png';
+import skyboxFrontUrl from '../assets/textures/skybox_front.png';
+import skyboxBackUrl from '../assets/textures/skybox_back.png';
+import laserSoundUrl from '../assets/sounds/laser_sound_3.wav';
+
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
     get: function() {
@@ -182,23 +191,23 @@ function init() {
 }
 
 function loadStarsTexture() {
-    // Load all 6 skybox textures
+    // Load all 6 skybox textures using imported URLs
     const skyboxTextures = [
-        'skybox_right.png',
-        'skybox_left.png',
-        'skybox_top.png',
-        'skybox_bottom.png',
-        'skybox_front.png',
-        'skybox_back.png'
+        skyboxRightUrl,
+        skyboxLeftUrl,
+        skyboxTopUrl,
+        skyboxBottomUrl,
+        skyboxFrontUrl,
+        skyboxBackUrl
     ];
     
-    skyboxTextures.forEach((textureName, index) => {
+    skyboxTextures.forEach((textureUrl, index) => {
         textures[`skybox_${index}`] = textureLoader.load(
-            `./js/textures/${textureName}`,
+            textureUrl,
             undefined,
             undefined,
             () => {
-                console.warn(`Could not load ${textureName}, using fallback color`);
+                console.warn(`Could not load skybox texture ${index}, using fallback color`);
                 const canvas = document.createElement('canvas');
                 canvas.width = 128;
                 canvas.height = 128;
@@ -764,9 +773,9 @@ function getFlashFromPool() {
 }
 
 function preloadSounds() {
-    // Create a pool of audio objects
+    // Create a pool of audio objects using imported sound URL
     for (let i = 0; i < MAX_SOUNDS; i++) {
-        const sound = new Audio('./js/sounds/laser_sound_3.wav');
+        const sound = new Audio(laserSoundUrl);
         sound.load(); // Preload the sound
         sound.volume = 0.5; // Set appropriate volume
         soundPool.push({
