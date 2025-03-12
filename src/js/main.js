@@ -100,9 +100,7 @@ const keyboard = {};
 const remotePlayers = {};
 
 window.addOrUpdateRemotePlayer = function(id, data) {
-    // Check if player already exists
     if (!remotePlayers[id]) {
-        // Player doesn't exist yet; create them
         const remotePlayer = createPlayer(scene);
         remotePlayer.name = `remotePlayer_${id}`;
         scene.add(remotePlayer);
@@ -110,21 +108,8 @@ window.addOrUpdateRemotePlayer = function(id, data) {
         console.log(`Created remote player: ${id}`);
     }
 
-    // Explicitly validate data to ensure it's correct
-    if (data.position && data.rotation) {
-        remotePlayers[id].position.set(
-            data.position.x || 0,
-            data.position.y || 20,
-            data.position.z || 70
-        );
-        remotePlayers[id].rotation.set(
-            data.rotation.x || 0,
-            data.rotation.y || 0,
-            data.rotation.z || 0
-        );
-    } else {
-        console.warn(`Invalid data received for player ${id}:`, data);
-    }
+    remotePlayers[id].position.set(data.position.x, data.position.y, data.position.z);
+    remotePlayers[id].rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
 };
 
 
@@ -339,8 +324,16 @@ function animate() {
 
         if (isConnected && socket) {
             socket.emit('updatePosition', {
-                position: player.position,
-                rotation: player.rotation
+                position: {
+                    x: player.position.x,
+                    y: player.position.y,
+                    z: player.position.z
+                },
+                rotation: {
+                    x: player.rotation.x,
+                    y: player.rotation.y,
+                    z: player.rotation.z
+                }
             });
         }
     }
