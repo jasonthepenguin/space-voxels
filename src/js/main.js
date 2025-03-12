@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import uiManager, { GameState } from './uiManager.js';
+import { io } from 'socket.io-client';
 
 // Game state variables
 let scene, camera, renderer, controls;
@@ -33,6 +34,16 @@ import skyboxBottomUrl from '../assets/textures/skybox_bottom.png';
 import skyboxFrontUrl from '../assets/textures/skybox_front.png';
 import skyboxBackUrl from '../assets/textures/skybox_back.png';
 import laserSoundUrl from '../assets/sounds/laser_sound_3.wav';
+
+// Socket.io connection
+let socket;
+let roomId = null;
+let playerId = null;
+let playerCount = 1; // Default to 1 (local player)
+let isConnected = false;
+
+// Backend server URL - will use environment variable in production
+const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
 
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
@@ -127,6 +138,96 @@ const planetData = [
       orbitSpeed: 0.0008 * ORBIT_SPEED_MULTIPLIER }
 ];
 
+// Connect to Socket.io server
+function connectToServer() {
+  console.log(`Connecting to Socket.io server at ${SOCKET_SERVER_URL}`);
+  
+  // Get room ID from URL or generate a random one
+  const urlParams = new URLSearchParams(window.location.search);
+  roomId = urlParams.get('room') || generateRoomId();
+  
+  // Update URL with room ID for sharing
+  if (!urlParams.has('room')) {
+    const newUrl = `${window.location.pathname}?room=${roomId}${window.location.hash}`;
+    window.history.replaceState({}, '', newUrl);
+  }
+  
+  console.log(`Joining room: ${roomId}`);
+  
+  // Connect to server with more detailed logging
+  try {
+    socket = io(SOCKET_SERVER_URL, {
+      transports: ['websocket'],
+      query: { roomId },
+      reconnectionAttempts: 5,
+      timeout: 10000
+    });
+    
+    // Connection events with more detailed logging
+    socket.on('connect', () => {
+      console.log('Connected to server with socket ID:', socket.id);
+      isConnected = true;
+      playerId = socket.id;
+      
+      // Join room
+      socket.emit('joinRoom', { roomId });
+      console.log(`Sent joinRoom event for room: ${roomId}`);
+    });
+    
+    socket.on('disconnect', (reason) => {
+      console.log(`Disconnected from server. Reason: ${reason}`);
+      isConnected = false;
+      updatePlayerCount(1); // Reset to 1 when disconnected
+    });
+    
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error.message);
+      isConnected = false;
+    });
+    
+    socket.on('connect_timeout', () => {
+      console.error('Connection timeout');
+      isConnected = false;
+    });
+    
+    socket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`Attempting to reconnect: attempt ${attemptNumber}`);
+    });
+    
+    socket.on('reconnect_failed', () => {
+      console.error('Failed to reconnect after multiple attempts');
+    });
+    
+    // Game-specific events
+    socket.on('playerCount', (data) => {
+      console.log('Player count update:', data.count);
+      updatePlayerCount(data.count);
+    });
+    
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+    
+    // More event handlers will be added later for position updates, etc.
+  } catch (error) {
+    console.error('Error initializing socket connection:', error);
+  }
+}
+
+// Generate a random room ID
+function generateRoomId() {
+  return Math.random().toString(36).substring(2, 8);
+}
+
+// Update player count in UI
+function updatePlayerCount(count) {
+  playerCount = count;
+  const playersCounterElement = document.getElementById('players-counter');
+  if (playersCounterElement) {
+    playersCounterElement.textContent = `Players Online: ${count}`;
+  }
+}
+
 // Initialize the game
 function init() {
     // Create scene
@@ -181,6 +282,9 @@ function init() {
     
     // Setup controls
     setupControls();
+    
+    // Connect to multiplayer server
+    connectToServer();
 
     // Start animation loop
     animate();
@@ -1122,6 +1226,27 @@ function animate() {
         if (!window.cameraAnimating) {
             updateCameraPosition();
         }
+        
+        // Send position updates to server if connected and playing
+        if (socket && isConnected && player && uiManager.isPlaying()) {
+            // Throttle updates to reduce bandwidth (every 100ms)
+            if (!player.lastUpdateTime || (Date.now() - player.lastUpdateTime) > 100) {
+                socket.emit('updatePosition', {
+                    roomId,
+                    position: {
+                        x: player.position.x,
+                        y: player.position.y,
+                        z: player.position.z
+                    },
+                    rotation: {
+                        x: player.rotation.x,
+                        y: player.rotation.y,
+                        z: player.rotation.z
+                    }
+                });
+                player.lastUpdateTime = Date.now();
+            }
+        }
     }
     
     // Update planet positions
@@ -1261,6 +1386,11 @@ function startGame() {
     
     // Update camera position to follow player
     updateCameraPosition();
+    
+    // If connected to server, send player ready event
+    if (socket && isConnected) {
+      socket.emit('playerReady', { roomId });
+    }
 }
 
 // New function to reset the game state
@@ -1286,6 +1416,11 @@ function resetGame() {
         laser.visible = false;
     });
     lasers = [];
+    
+    // Notify server that player has left game mode
+    if (socket && isConnected) {
+        socket.emit('playerNotReady', { roomId });
+    }
 }
 
 // Initialize the game when the window loads
