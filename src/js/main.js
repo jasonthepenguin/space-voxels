@@ -1227,6 +1227,8 @@ function animate() {
             updateCameraPosition();
         }
         
+        // TEMPORARILY DISABLED: Position updates to save Railway credits
+        /*
         // Send position updates to server if connected and playing
         if (socket && isConnected && player && uiManager.isPlaying()) {
             // Throttle updates to reduce bandwidth (every 100ms)
@@ -1247,6 +1249,7 @@ function animate() {
                 player.lastUpdateTime = Date.now();
             }
         }
+        */
     }
     
     // Update planet positions
