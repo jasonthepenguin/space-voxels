@@ -132,7 +132,7 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         ignoreList.push(line);
     });
     
-    let targetPoint, targetObject, targetParent;
+    let targetPoint, targetObject, targetParent, instanceId;
     if (intersects.length > 0) {
         // Filter out objects to ignore and anything too close to the player
         const filteredIntersects = intersects.filter(intersect => {
@@ -155,6 +155,11 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             // Hit something valid
             targetPoint = filteredIntersects[0].point;
             targetObject = filteredIntersects[0].object;
+            
+            // Capture the instance ID if we hit an instanced mesh
+            if (targetObject.isInstancedMesh) {
+                instanceId = filteredIntersects[0].instanceId;
+            }
             
             // Find the parent group (sun, planet, or moon)
             if (targetObject.isInstancedMesh) {
@@ -215,8 +220,13 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             // Convert world coordinates to local coordinates for the explosion
             const localPoint = targetParent.worldToLocal(targetPoint.clone());
             
+            // Check if we hit Saturn's rings specifically
+            const isSaturnRings = targetParent.name === 'Saturn' && 
+                                 targetObject === targetParent.ringInstancedMesh;
+            
             setTimeout(() => {
-                createExplosion(targetParent, localPoint);
+                // Pass the instanceId and a flag indicating if this is Saturn's rings
+                createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
             }, 300);
         }
     }

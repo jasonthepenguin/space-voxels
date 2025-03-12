@@ -12,7 +12,8 @@ import {
     createPlanets, 
     createMoon, 
     updatePlanets,
-    createExplosion
+    createExplosion,
+    respawnAllCelestialBodies
 } from './celestialBodies.js';
 
 import {
@@ -219,6 +220,12 @@ function setupEventListeners() {
                     uiManager.changeState(GameState.MAIN_MENU);
                 }
             }
+        }
+        
+        // Respawn all celestial bodies with 'R' key
+        if (event.code === 'KeyR' && gameStarted) {
+            console.log("Respawning all celestial bodies");
+            respawnAllCelestialBodies(sun, planets);
         }
     });
     

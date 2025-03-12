@@ -444,11 +444,65 @@ export function updatePlanets(planets, delta) {
 }
 
 // Create explosion when a celestial body is hit
-export function createExplosion(parent, targetPos, radius = 1.5) {
-    // If the parent doesn't have an instancedMesh, it's not a voxel-based object
+export function createExplosion(parent, targetPos, instanceId = null, isSaturnRings = false) {
+    // If the parent doesn't have an instancedMesh or ringInstancedMesh, it's not a voxel-based object
     if (!parent.instancedMesh && !parent.ringInstancedMesh) {
         return;
     }
+    
+    // If we have a specific instanceId, only destroy that voxel
+    if (instanceId !== null) {
+        // Hide the specific voxel by moving it far away
+        const matrix = new THREE.Matrix4();
+        matrix.setPosition(1000, 1000, 1000); // Move far away
+        
+        if (isSaturnRings && parent.ringInstancedMesh) {
+            // Handle Saturn's rings
+            parent.ringInstancedMesh.setMatrixAt(instanceId, matrix);
+            parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
+            
+            // Initialize destroyedRingVoxels if it doesn't exist
+            if (!parent.destroyedRingVoxels) {
+                parent.destroyedRingVoxels = {};
+            }
+            
+            // Find and store the original position before removing from ringDict
+            for (const [key, value] of Object.entries(parent.ringDict)) {
+                if (value === instanceId) {
+                    // Store the original position (x,y,z from the key)
+                    const [x, y, z] = key.split(',').map(Number);
+                    parent.destroyedRingVoxels[instanceId] = { x, y, z };
+                    delete parent.ringDict[key];
+                    break;
+                }
+            }
+        } else if (parent.instancedMesh) {
+            // Handle regular planet/sun voxels
+            parent.instancedMesh.setMatrixAt(instanceId, matrix);
+            parent.instancedMesh.instanceMatrix.needsUpdate = true;
+            
+            // Initialize destroyedVoxels if it doesn't exist
+            if (!parent.destroyedVoxels) {
+                parent.destroyedVoxels = {};
+            }
+            
+            // Find and store the original position before removing from blockDict
+            for (const [key, value] of Object.entries(parent.blockDict)) {
+                if (value === instanceId) {
+                    // Store the original position (x,y,z from the key)
+                    const [x, y, z] = key.split(',').map(Number);
+                    parent.destroyedVoxels[instanceId] = { x, y, z };
+                    delete parent.blockDict[key];
+                    break;
+                }
+            }
+        }
+        
+        return;
+    }
+    
+    // Fallback to original radius-based explosion if no instanceId is provided
+    const radius = 1.5;
     
     // List of blocks to destroy (by index)
     const blocksToDestroy = [];
@@ -517,5 +571,68 @@ export function createExplosion(parent, targetPos, radius = 1.5) {
         if (blocksToDestroy.length > 0) {
             parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
         }
+    }
+}
+
+// New function to respawn all voxels for a celestial body
+export function respawnPlanetVoxels(parent) {
+    if (!parent) return;
+    
+    const matrix = new THREE.Matrix4();
+    
+    // Respawn main body voxels
+    if (parent.instancedMesh && parent.destroyedVoxels) {
+        for (const [instanceId, position] of Object.entries(parent.destroyedVoxels)) {
+            // Move voxel back to its original position
+            matrix.setPosition(position.x, position.y, position.z);
+            parent.instancedMesh.setMatrixAt(parseInt(instanceId), matrix);
+            
+            // Restore entry in blockDict
+            parent.blockDict[`${position.x},${position.y},${position.z}`] = parseInt(instanceId);
+        }
+        
+        // Update the instance matrix
+        parent.instancedMesh.instanceMatrix.needsUpdate = true;
+        
+        // Clear the destroyed voxels record
+        parent.destroyedVoxels = {};
+    }
+    
+    // Respawn Saturn's rings if applicable
+    if (parent.ringInstancedMesh && parent.destroyedRingVoxels) {
+        for (const [instanceId, position] of Object.entries(parent.destroyedRingVoxels)) {
+            // Move ring voxel back to its original position
+            matrix.setPosition(position.x, position.y, position.z);
+            parent.ringInstancedMesh.setMatrixAt(parseInt(instanceId), matrix);
+            
+            // Restore entry in ringDict
+            parent.ringDict[`${position.x},${position.y},${position.z}`] = parseInt(instanceId);
+        }
+        
+        // Update the instance matrix
+        parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
+        
+        // Clear the destroyed ring voxels record
+        parent.destroyedRingVoxels = {};
+    }
+}
+
+// Function to respawn all celestial bodies in the solar system
+export function respawnAllCelestialBodies(sun, planets) {
+    // Respawn the sun
+    if (sun) {
+        respawnPlanetVoxels(sun);
+    }
+    
+    // Respawn all planets
+    if (planets && planets.length > 0) {
+        planets.forEach(planet => {
+            respawnPlanetVoxels(planet);
+            
+            // Respawn moon if the planet has one
+            if (planet.moon) {
+                respawnPlanetVoxels(planet.moon);
+            }
+        });
     }
 } 
