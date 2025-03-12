@@ -37,7 +37,6 @@ import laserSoundUrl from '../assets/sounds/laser_sound_3.wav';
 
 // Socket.io connection
 let socket;
-let roomId = null;
 let playerId = null;
 let playerCount = 1; // Default to 1 (local player)
 let isConnected = false;
@@ -142,23 +141,10 @@ const planetData = [
 function connectToServer() {
   console.log(`Connecting to Socket.io server at ${SOCKET_SERVER_URL}`);
   
-  // Get room ID from URL or generate a random one
-  const urlParams = new URLSearchParams(window.location.search);
-  roomId = urlParams.get('room') || generateRoomId();
-  
-  // Update URL with room ID for sharing
-  if (!urlParams.has('room')) {
-    const newUrl = `${window.location.pathname}?room=${roomId}${window.location.hash}`;
-    window.history.replaceState({}, '', newUrl);
-  }
-  
-  console.log(`Joining room: ${roomId}`);
-  
   // Connect to server with more detailed logging
   try {
     socket = io(SOCKET_SERVER_URL, {
       transports: ['websocket'],
-      query: { roomId },
       reconnectionAttempts: 5,
       timeout: 10000
     });
@@ -169,9 +155,8 @@ function connectToServer() {
       isConnected = true;
       playerId = socket.id;
       
-      // Join room
-      socket.emit('joinRoom', { roomId });
-      console.log(`Sent joinRoom event for room: ${roomId}`);
+      // Server now automatically adds players to the global room
+      console.log('Joined global room');
     });
     
     socket.on('disconnect', (reason) => {
@@ -204,19 +189,30 @@ function connectToServer() {
       updatePlayerCount(data.count);
     });
     
+    // Receive room state when connecting
+    socket.on('roomState', (state) => {
+      console.log('Received room state:', state);
+      // We'll implement handling other players later
+    });
+    
+    // Handle player joined events
+    socket.on('playerJoined', (data) => {
+      console.log('New player joined:', data.id);
+      // We'll implement handling other players later
+    });
+    
+    // Handle player left events
+    socket.on('playerLeft', (data) => {
+      console.log('Player left:', data.id);
+      // We'll implement handling other players later
+    });
+    
     socket.on('error', (error) => {
       console.error('Socket error:', error);
     });
-    
-    // More event handlers will be added later for position updates, etc.
   } catch (error) {
     console.error('Error initializing socket connection:', error);
   }
-}
-
-// Generate a random room ID
-function generateRoomId() {
-  return Math.random().toString(36).substring(2, 8);
 }
 
 // Update player count in UI
@@ -1379,7 +1375,8 @@ function startGame() {
     
     // If connected to server, send player ready event
     if (socket && isConnected) {
-      socket.emit('playerReady', { roomId });
+      socket.emit('playerReady');
+      console.log('Sent playerReady event');
     }
 }
 
@@ -1409,7 +1406,8 @@ function resetGame() {
     
     // Notify server that player has left game mode
     if (socket && isConnected) {
-        socket.emit('playerNotReady', { roomId });
+        socket.emit('playerNotReady');
+        console.log('Sent playerNotReady event');
     }
 }
 
