@@ -203,23 +203,10 @@ function setupEventListeners() {
     document.addEventListener('keydown', (event) => {
         keyboard[event.code] = true;
         
-        // Quit with Escape key
-        if (event.code === 'Escape') {
-            // Only exit pointer lock if game is started
-            if (gameStarted && cursorLocked) {
-                document.exitPointerLock = document.exitPointerLock || 
-                                          document.mozExitPointerLock ||
-                                          document.webkitExitPointerLock;
-                document.exitPointerLock();
-                
-                // Explicitly reset the game when Escape is pressed
-                resetGame();
-                
-                // Explicitly return to menu
-                if (uiManager) {
-                    uiManager.changeState(GameState.MAIN_MENU);
-                }
-            }
+        // Prevent default behavior for Escape key when game is started
+        if (event.code === 'Escape' && gameStarted) {
+            event.preventDefault();
+            // We'll let the pointer lock handler deal with re-locking
         }
         
         // Respawn all celestial bodies with 'R' key
@@ -235,7 +222,7 @@ function setupEventListeners() {
     
     // Mouse event listeners
     document.addEventListener('mousedown', (event) => {
-        if (event.button === 0 && cursorLocked && uiManager.isPlaying()) { // Only shoot if game started
+        if (event.button === 0 && uiManager.isPlaying() && player) { // Only shoot if game started and player exists
             leftMouseHeld = true;
             shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
         }
@@ -249,11 +236,24 @@ function setupEventListeners() {
     
     // Mouse movement for camera rotation only (not ship rotation)
     document.addEventListener('mousemove', (event) => {
-        if (cursorLocked && uiManager.isPlaying() && player) { // Only rotate camera if game started
-            // Calculate camera offset based on mouse movement
-            // This doesn't affect the ship's rotation, only where the player is looking
-            const cameraYaw = -event.movementX * 0.002;
-            const cameraPitch = -event.movementY * 0.002;
+        if (uiManager.isPlaying() && player) { // Only rotate camera if game started and player exists
+            // For pointer lock, use movementX/Y
+            // For non-pointer lock, we'll need to calculate movement differently
+            let moveX, moveY;
+            
+            if (document.pointerLockElement === document.body) {
+                moveX = event.movementX;
+                moveY = event.movementY;
+            } else {
+                // When not in pointer lock, we can still allow camera movement
+                // but it will be less smooth without movementX/Y
+                // We can use a fixed value or calculate based on position
+                moveX = event.movementX || (event.clientX - window.innerWidth/2) * 0.1;
+                moveY = event.movementY || (event.clientY - window.innerHeight/2) * 0.1;
+            }
+            
+            const cameraYaw = -moveX * 0.002;
+            const cameraPitch = -moveY * 0.002;
             
             // Apply to camera offset angles (stored as properties on the offset vector)
             if (!cameraOffset.angles) {
