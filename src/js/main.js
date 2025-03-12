@@ -758,7 +758,14 @@ function setupEventListeners() {
                                           document.mozExitPointerLock ||
                                           document.webkitExitPointerLock;
                 document.exitPointerLock();
-                // The resetGame function will be called by the pointerlock change event
+                
+                // Explicitly reset the game when Escape is pressed
+                resetGame();
+                
+                // Explicitly return to menu
+                if (uiManager) {
+                    uiManager.changeState(GameState.MAIN_MENU);
+                }
             }
         }
     });
@@ -891,6 +898,9 @@ function preloadSounds() {
 }
 
 function shootLaser() {
+    // Only allow shooting if game is in playing state
+    if (!uiManager.isPlaying()) return;
+    
     // Play sound from pool if available
     if (soundsLoaded) {
         // Find an available sound in the pool
@@ -1116,7 +1126,8 @@ function createExplosion(parent, targetPos, radius = 1.5) {
 }
 
 function handleMovement(delta) {
-    if (!cursorLocked || !gameStarted || !player) return; // Only move if game started and player exists
+    // Only move if game is active and player exists
+    if (!uiManager.isPlaying() || !player) return;
     
     // Always move forward in the direction the ship is facing
     const forwardDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
@@ -1217,8 +1228,8 @@ function animate() {
     // Get delta time from Three.js clock
     const delta = clock.getDelta();
     
-    // Only handle player movement if game has started
-    if (gameStarted) {
+    // Only handle player movement if game is in playing state
+    if (uiManager.isPlaying()) {
         // Handle player movement
         handleMovement(delta);
         
@@ -1226,30 +1237,6 @@ function animate() {
         if (!window.cameraAnimating) {
             updateCameraPosition();
         }
-        
-        // TEMPORARILY DISABLED: Position updates to save Railway credits
-        /*
-        // Send position updates to server if connected and playing
-        if (socket && isConnected && player && uiManager.isPlaying()) {
-            // Throttle updates to reduce bandwidth (every 100ms)
-            if (!player.lastUpdateTime || (Date.now() - player.lastUpdateTime) > 100) {
-                socket.emit('updatePosition', {
-                    roomId,
-                    position: {
-                        x: player.position.x,
-                        y: player.position.y,
-                        z: player.position.z
-                    },
-                    rotation: {
-                        x: player.rotation.x,
-                        y: player.rotation.y,
-                        z: player.rotation.z
-                    }
-                });
-                player.lastUpdateTime = Date.now();
-            }
-        }
-        */
     }
     
     // Update planet positions
