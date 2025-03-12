@@ -3,6 +3,8 @@ import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockCont
 import uiManager, { GameState } from './uiManager.js';
 import { io } from 'socket.io-client';
 
+
+
 // Import modules
 import { 
     celestialColors, 
@@ -94,6 +96,46 @@ const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 // Keyboard state
 const keyboard = {};
+
+const remotePlayers = {};
+
+window.addOrUpdateRemotePlayer = function(id, data) {
+    // Check if player already exists
+    if (!remotePlayers[id]) {
+        // Player doesn't exist yet; create them
+        const remotePlayer = createPlayer(scene);
+        remotePlayer.name = `remotePlayer_${id}`;
+        scene.add(remotePlayer);
+        remotePlayers[id] = remotePlayer;
+        console.log(`Created remote player: ${id}`);
+    }
+
+    // Explicitly validate data to ensure it's correct
+    if (data.position && data.rotation) {
+        remotePlayers[id].position.set(
+            data.position.x || 0,
+            data.position.y || 20,
+            data.position.z || 70
+        );
+        remotePlayers[id].rotation.set(
+            data.rotation.x || 0,
+            data.rotation.y || 0,
+            data.rotation.z || 0
+        );
+    } else {
+        console.warn(`Invalid data received for player ${id}:`, data);
+    }
+};
+
+
+window.removeRemotePlayer = function(id) {
+    const player = remotePlayers[id];
+    if (player) {
+        scene.remove(player);
+        delete remotePlayers[id];
+        console.log(`Removed remote player: ${id}`);
+    }
+};
 
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
@@ -290,30 +332,21 @@ function setupEventListeners() {
 
 function animate() {
     requestAnimationFrame(animate);
-    
-    // Get delta time from Three.js clock
     const delta = clock.getDelta();
-    
-    // Only handle player movement if game is in playing state
-    if (uiManager.isPlaying()) {
-        // Handle player movement
-        if (player) {
-            handleMovement(player, keyboard, delta, updateCameraPosition);
-        }
-        
-        // Update camera position only if we're not in a menu animation
-        if (!window.cameraAnimating) {
-            updateCameraPosition();
+
+    if (uiManager.isPlaying() && player) {
+        handleMovement(player, keyboard, delta, updateCameraPosition);
+
+        if (isConnected && socket) {
+            socket.emit('updatePosition', {
+                position: player.position,
+                rotation: player.rotation
+            });
         }
     }
-    
-    // Update planet positions
+
     updatePlanets(planets, delta);
-    
-    // Update lasers
     updateLasers(lasers, delta);
-    
-    // Render the scene
     renderer.render(scene, camera);
 }
 
@@ -326,19 +359,10 @@ function updateCameraPosition() {
 
 // New function to start the game
 function startGame() {
-    console.log("Starting game...");
     gameStarted = true;
-    
-    // Create player now that game is starting
     player = createPlayer(scene);
-    
-    // Initialize camera offset angles
     cameraOffset.angles = { yaw: 0, pitch: 0 };
-    
-    // Update camera position to follow player
     updateCameraPosition();
-    
-    // Send player ready event to server
     sendPlayerReady(socket, isConnected);
 }
 
