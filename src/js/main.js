@@ -306,13 +306,7 @@ function setupEventListeners() {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
     
-    // Add listener for the start button
-    document.addEventListener('pointerlockchange', function() {
-        cursorLocked = handlePointerLockChange();
-        if (document.pointerLockElement === document.body && !gameStarted) {
-            startGame();
-        }
-    });
+
 }
 
 function animate() {
