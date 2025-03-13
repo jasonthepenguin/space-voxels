@@ -42,23 +42,7 @@
       max-width: 400px;
       z-index: 100;
       display: none;
-    }
-    #resume-button {
-      background-color: #4CAF50;
-      border: none;
-      color: white;
-      padding: 15px 32px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-      font-size: 16px;
-      margin: 10px 2px;
       cursor: pointer;
-      border-radius: 5px;
-      transition: background-color 0.3s;
-    }
-    #resume-button:hover {
-      background-color: #45a049;
     }
     #start-button {
       background-color: #4CAF50;
@@ -153,14 +137,6 @@
     <p>WASD: Move the player</p>
     <p>Mouse: Rotate the player</p>
     <p>Left Mouse: Shoot</p>
-    <p>Escape: Exit game mode</p>
-  </div>
-  
-  <!-- New Resume Overlay -->
-  <div id="resume-overlay">
-    <h2>Game Paused</h2>
-    <p>Click the button below to resume</p>
-    <button id="resume-button">Resume Game</button>
   </div>
   
   <!-- New Ship Builder UI -->
@@ -178,6 +154,13 @@
   <div id="crosshair"></div>
   <div id="fps-counter">FPS: 0</div>
   <div id="players-counter">Players Online: 1</div>
+  
+  <!-- Resume overlay -->
+  <div id="resume-overlay">
+    <h2>Click to Resume</h2>
+    <p>Click anywhere to resume the game</p>
+  </div>
+  
   <script type="module" src="./src/js/main.js"></script>
 </body>
 </html> 

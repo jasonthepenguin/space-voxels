@@ -5,8 +5,7 @@ import * as THREE from 'three';
 export const GameState = {
     MAIN_MENU: 'MAIN_MENU',
     SHIP_BUILDER: 'SHIP_BUILDER',
-    PLAYING: 'PLAYING',
-    PAUSED: 'PAUSED'  // Add a new game state for paused
+    PLAYING: 'PLAYING'
 };
 
 class UIManager {
@@ -26,7 +25,6 @@ class UIManager {
         this.startButton = document.getElementById('start-button');
         this.shipBuilderButton = document.getElementById('ship-builder-button');
         this.returnButton = document.getElementById('return-button');
-        this.resumeButton = document.getElementById('resume-button');
         
         // Game references
         this.camera = null;
@@ -68,7 +66,9 @@ class UIManager {
                 this.shipBuilderElement.style.display = 'none';
                 this.crosshairElement.style.display = 'none';
                 this.playersCounterElement.style.display = 'none';
-                this.resumeOverlayElement.style.display = 'none';
+                if (this.resumeOverlayElement) {
+                    this.resumeOverlayElement.style.display = 'none';
+                }
                 break;
                 
             case GameState.SHIP_BUILDER:
@@ -76,7 +76,9 @@ class UIManager {
                 this.shipBuilderElement.style.display = 'block';
                 this.crosshairElement.style.display = 'none';
                 this.playersCounterElement.style.display = 'none';
-                this.resumeOverlayElement.style.display = 'none';
+                if (this.resumeOverlayElement) {
+                    this.resumeOverlayElement.style.display = 'none';
+                }
                 break;
                 
             case GameState.PLAYING:
@@ -84,7 +86,9 @@ class UIManager {
                 this.shipBuilderElement.style.display = 'none';
                 this.crosshairElement.style.display = 'block';
                 this.playersCounterElement.style.display = 'block';
-                this.resumeOverlayElement.style.display = 'none';
+                if (this.resumeOverlayElement) {
+                    this.resumeOverlayElement.style.display = 'none';
+                }
                 
                 // Request pointer lock
                 document.body.requestPointerLock = document.body.requestPointerLock || 
@@ -96,14 +100,6 @@ class UIManager {
                 if (this.gameStartCallback && prevState === GameState.MAIN_MENU) {
                     this.gameStartCallback();
                 }
-                break;
-                
-            case GameState.PAUSED:
-                this.instructionsElement.style.display = 'none';
-                this.shipBuilderElement.style.display = 'none';
-                this.crosshairElement.style.display = 'none';
-                this.playersCounterElement.style.display = 'block';
-                this.resumeOverlayElement.style.display = 'block';
                 break;
         }
         
@@ -135,11 +131,18 @@ class UIManager {
             }
         });
         
-        // Resume button
-        if (this.resumeButton) {
-            this.resumeButton.addEventListener('click', () => {
-                if (this.currentState === GameState.PAUSED) {
-                    this.changeState(GameState.PLAYING);
+        // Resume overlay click
+        if (this.resumeOverlayElement) {
+            this.resumeOverlayElement.addEventListener('click', () => {
+                if (this.currentState === GameState.PLAYING) {
+                    // Request pointer lock again
+                    document.body.requestPointerLock = document.body.requestPointerLock || 
+                                                    document.body.mozRequestPointerLock ||
+                                                    document.body.webkitRequestPointerLock;
+                    document.body.requestPointerLock();
+                    
+                    // Hide the overlay
+                    this.resumeOverlayElement.style.display = 'none';
                 }
             });
         }
@@ -158,28 +161,22 @@ class UIManager {
             // Pointer is locked, we're in game mode
             console.log("Pointer locked - game mode");
             
-            // If we were paused, change to playing
-            if (this.currentState === GameState.PAUSED) {
-                this.changeState(GameState.PLAYING);
-            } 
-            // If we weren't playing before, start playing
-            else if (this.currentState !== GameState.PLAYING) {
-                this.changeState(GameState.PLAYING);
-            } 
-            // Otherwise just update UI elements
-            else {
-                this.crosshairElement.style.display = 'block';
-                this.playersCounterElement.style.display = 'block';
+            // Hide resume overlay if it's visible
+            if (this.resumeOverlayElement) {
                 this.resumeOverlayElement.style.display = 'none';
             }
-        } else {
-            // Pointer is unlocked - check if we should pause or exit to menu
-            console.log("Pointer unlocked - pausing game");
-            this.crosshairElement.style.display = 'none';
             
-            // If we're in playing state, change to paused
-            if (this.currentState === GameState.PLAYING) {
-                this.changeState(GameState.PAUSED);
+            // If we weren't playing before, start playing
+            if (this.currentState !== GameState.PLAYING) {
+                this.changeState(GameState.PLAYING);
+            }
+        } else {
+            // Pointer is unlocked, but we'll keep the game running
+            console.log("Pointer unlocked - continuing game");
+            
+            // If we're in playing state, show the resume overlay
+            if (this.currentState === GameState.PLAYING && this.resumeOverlayElement) {
+                this.resumeOverlayElement.style.display = 'block';
             }
         }
     }
@@ -262,11 +259,6 @@ class UIManager {
     // Check if game is in playing state
     isPlaying() {
         return this.currentState === GameState.PLAYING;
-    }
-    
-    // Check if game is in paused state
-    isPaused() {
-        return this.currentState === GameState.PAUSED;
     }
 }
 
