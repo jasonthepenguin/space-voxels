@@ -309,15 +309,19 @@ function setupEventListeners() {
 
 }
 
+const POSITION_UPDATE_INTERVAL = 100; // milliseconds ( 10 updates per second )
+let lastPositionUpdate = 0;
+
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
+    const currentTime = performance.now();
 
     if (uiManager.isPlaying() && player) {
         handleMovement(player, keyboard, delta, updateCameraPosition);
-
-        if (isConnected && socket) {
-            socket.emit('updatePosition', {
+        
+        if (isConnected && socket && currentTime - lastPositionUpdate > POSITION_UPDATE_INTERVAL ) {
+            socket.volatile.emit('updatePosition', {
                 position: {
                     x: player.position.x,
                     y: player.position.y,
@@ -329,6 +333,8 @@ function animate() {
                     z: player.rotation.z
                 }
             });
+
+            lastPositionUpdate = currentTime;
         }
     }
 
