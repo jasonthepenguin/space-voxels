@@ -105,12 +105,39 @@ window.addOrUpdateRemotePlayer = function(id, data) {
         remotePlayer.name = `remotePlayer_${id}`;
         scene.add(remotePlayer);
         remotePlayers[id] = remotePlayer;
-        console.log(`Created remote player: ${id}`);
-    }
 
-    remotePlayers[id].position.set(data.position.x, data.position.y, data.position.z);
-    remotePlayers[id].rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+        // Immediately set initial position and rotation
+        remotePlayer.position.set(data.position.x, data.position.y, data.position.z);
+        remotePlayer.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+
+        // Store target position/rotation for interpolation
+        remotePlayer.userData.targetPosition = new THREE.Vector3(
+            data.position.x,
+            data.position.y,
+            data.position.z
+        );
+        remotePlayer.userData.targetRotation = new THREE.Euler(
+            data.rotation.x,
+            data.rotation.y,
+            data.rotation.z
+        );
+
+        console.log(`Created remote player: ${id}`);
+    } else {
+        // Update target positions/rotations for interpolation
+        remotePlayers[id].userData.targetPosition.set(
+            data.position.x,
+            data.position.y,
+            data.position.z
+        );
+        remotePlayers[id].userData.targetRotation.set(
+            data.rotation.x,
+            data.rotation.y,
+            data.rotation.z
+        );
+    }
 };
+
 
 
 window.removeRemotePlayer = function(id) {
@@ -309,8 +336,9 @@ function setupEventListeners() {
 
 }
 
-const POSITION_UPDATE_INTERVAL = 100; // milliseconds ( 10 updates per second )
+const POSITION_UPDATE_INTERVAL = 100; // milliseconds (10 updates per second)
 let lastPositionUpdate = 0;
+const REMOTE_PLAYER_LERP_FACTOR = 0.2;
 
 function animate() {
     requestAnimationFrame(animate);
@@ -319,8 +347,8 @@ function animate() {
 
     if (uiManager.isPlaying() && player) {
         handleMovement(player, keyboard, delta, updateCameraPosition);
-        
-        if (isConnected && socket && currentTime - lastPositionUpdate > POSITION_UPDATE_INTERVAL ) {
+
+        if (isConnected && socket && currentTime - lastPositionUpdate > POSITION_UPDATE_INTERVAL) {
             socket.volatile.emit('updatePosition', {
                 position: {
                     x: player.position.x,
@@ -338,10 +366,35 @@ function animate() {
         }
     }
 
+    // Interpolate remote players
+    for (const id in remotePlayers) {
+        const remotePlayer = remotePlayers[id];
+        if (remotePlayer.userData.targetPosition && remotePlayer.userData.targetRotation) {
+            remotePlayer.position.lerp(remotePlayer.userData.targetPosition, REMOTE_PLAYER_LERP_FACTOR);
+
+            remotePlayer.rotation.x = THREE.MathUtils.lerp(
+                remotePlayer.rotation.x,
+                remotePlayer.userData.targetRotation.x,
+                REMOTE_PLAYER_LERP_FACTOR
+            );
+            remotePlayer.rotation.y = THREE.MathUtils.lerp(
+                remotePlayer.rotation.y,
+                remotePlayer.userData.targetRotation.y,
+                REMOTE_PLAYER_LERP_FACTOR
+            );
+            remotePlayer.rotation.z = THREE.MathUtils.lerp(
+                remotePlayer.rotation.z,
+                remotePlayer.userData.targetRotation.z,
+                REMOTE_PLAYER_LERP_FACTOR
+            );
+        }
+    }
+
     updatePlanets(planets, delta);
     updateLasers(lasers, delta);
     renderer.render(scene, camera);
 }
+
 
 // Update camera position based on player position and rotation
 function updateCameraPosition() {
