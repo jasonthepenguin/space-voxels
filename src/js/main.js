@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import uiManager, { GameState } from './uiManager.js';
 import { io } from 'socket.io-client';
+import { serverTimeOffset } from './networking.js';
 
 // Import mobile controls
 import {
@@ -231,7 +232,7 @@ function init() {
     orbitLines = createOrbitLines(scene, planetData);
 
     // Create planets
-    planets = createPlanets(scene, voxelGeometry, planetData);
+    planets = createPlanets(scene, voxelGeometry, planetData, serverTimeOffset);
 
     // Add Earth's moon
     createMoon(planets);

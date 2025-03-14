@@ -148,7 +148,7 @@ export function createOrbitLines(scene, planetData) {
 }
 
 // Create planets
-export function createPlanets(scene, voxelGeometry, planetData) {
+export function createPlanets(scene, voxelGeometry, planetData, serverTimeOffset = 0) {
     const planets = [];
     
     planetData.forEach(data => {
@@ -156,7 +156,8 @@ export function createPlanets(scene, voxelGeometry, planetData) {
         planet.name = data.name;
         planet.orbitRadius = data.orbitRadius;
         planet.orbitSpeed = data.orbitSpeed;
-        planet.orbitAngle = Math.random() * Math.PI * 2;
+        const syncedTime = (Date.now() - serverTimeOffset) / 1000; // seconds
+        planet.orbitAngle = (syncedTime * data.orbitSpeed) % (Math.PI * 2);
         planet.blockDict = {};
         
         const voxelRange = Math.floor(data.size) + 1;
