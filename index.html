@@ -217,6 +217,41 @@
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       transition: transform 0.1s, background-color 0.1s;
     }
+    /* Ship selector styles */
+    .ship-option {
+      width: 30%;
+      height: 120px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 10px;
+    }
+    
+    .ship-option:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-5px);
+    }
+    
+    .ship-option img {
+      width: 70px;
+      height: 70px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      object-fit: contain;
+      transition: all 0.3s ease;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 5px;
+    }
+    
+    .ship-option span {
+      font-weight: bold;
+      color: white;
+    }
     /* Media queries for responsive design */
     @media (max-width: 768px) {
       #instructions {
@@ -238,7 +273,7 @@
     <h1>Space Voxels</h1>
     <button id="start-button">Start Game</button>
     <br>
-    <button id="ship-builder-button">Ship Builder</button>
+    <button id="ship-builder-button">Ship Selector</button>
     <p>Controls:</p>
     <p>WASD / Left Joystick: Move the player</p>
     <p>Mouse / Right Area: Rotate the player</p>
@@ -248,13 +283,26 @@
   
   <!-- New Ship Builder UI -->
   <div id="ship-builder-ui" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.7); color: white; padding: 20px; border-radius: 5px; text-align: center; max-width: 90%; width: 400px; z-index: 100;">
-    <h1>Ship Builder</h1>
-    <p>Build your own spaceship!</p>
-    <p style="color: #4CAF50; font-weight: bold;">Unlock feature with ur moneyz gang gang</p>
-    <p style="font-weight: bold; color: #ff9900; margin-top: 20px;">You think this shit is for free?? LOL LMAO</p>
-    <button id="paypal-button" style="background-color: #0070ba; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 10px 2px; cursor: pointer; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: background-color 0.3s;">
-      <span style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Pay</span><span style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style: italic; font-weight: bold;">Pal</span>
-    </button>
+    <h1>Ship Selector</h1>
+    <p>Choose your spaceship!</p>
+    
+    <div style="display: flex; justify-content: space-between; margin: 20px 0;">
+      <div class="ship-option">
+        <img src="./src/assets/textures/flowers.png" alt="Flowers Ship">
+        <span>Flowers Ship</span>
+      </div>
+      
+      <div class="ship-option">
+        <img src="./src/assets/textures/angel.png" alt="Angel Ship">
+        <span>Angel Ship</span>
+      </div>
+      
+      <div class="ship-option">
+        <img src="./src/assets/textures/chris.png" alt="Chris Ship">
+        <span>Chris Ship</span>
+      </div>
+    </div>
+    
     <button id="return-button" style="background-color: #f44336; border: none; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 10px 2px; cursor: pointer; border-radius: 5px; transition: background-color 0.3s;">Return to Menu</button>
   </div>
   

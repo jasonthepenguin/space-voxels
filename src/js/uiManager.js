@@ -4,7 +4,7 @@ import * as THREE from 'three';
 // Game States
 export const GameState = {
     MAIN_MENU: 'MAIN_MENU',
-    SHIP_BUILDER: 'SHIP_BUILDER',
+    SHIP_SELECTOR: 'SHIP_SELECTOR',
     PLAYING: 'PLAYING'
 };
 
@@ -15,7 +15,7 @@ class UIManager {
         
         // UI Elements
         this.instructionsElement = document.getElementById('instructions');
-        this.shipBuilderElement = document.getElementById('ship-builder-ui');
+        this.shipSelectorElement = document.getElementById('ship-builder-ui');
         this.crosshairElement = document.getElementById('crosshair');
         this.fpsCounterElement = document.getElementById('fps-counter');
         this.playersCounterElement = document.getElementById('players-counter');
@@ -24,7 +24,7 @@ class UIManager {
         
         // Buttons
         this.startButton = document.getElementById('start-button');
-        this.shipBuilderButton = document.getElementById('ship-builder-button');
+        this.shipSelectorButton = document.getElementById('ship-builder-button');
         this.returnButton = document.getElementById('return-button');
         
         // Game references
@@ -78,10 +78,10 @@ class UIManager {
             this.startButton.style.fontSize = '18px';
         }
         
-        if (this.shipBuilderButton) {
-            this.shipBuilderButton.style.padding = '15px 40px';
-            this.shipBuilderButton.style.margin = '15px 0';
-            this.shipBuilderButton.style.fontSize = '18px';
+        if (this.shipSelectorButton) {
+            this.shipSelectorButton.style.padding = '15px 40px';
+            this.shipSelectorButton.style.margin = '15px 0';
+            this.shipSelectorButton.style.fontSize = '18px';
         }
         
         if (this.returnButton) {
@@ -108,7 +108,7 @@ class UIManager {
         switch (newState) {
             case GameState.MAIN_MENU:
                 this.instructionsElement.style.display = 'block';
-                this.shipBuilderElement.style.display = 'none';
+                this.shipSelectorElement.style.display = 'none';
                 this.crosshairElement.style.display = 'none';
                 this.playersCounterElement.style.display = 'none';
                 if (this.resumeOverlayElement) {
@@ -119,9 +119,9 @@ class UIManager {
                 }
                 break;
                 
-            case GameState.SHIP_BUILDER:
+            case GameState.SHIP_SELECTOR:
                 this.instructionsElement.style.display = 'none';
-                this.shipBuilderElement.style.display = 'block';
+                this.shipSelectorElement.style.display = 'block';
                 this.crosshairElement.style.display = 'none';
                 this.playersCounterElement.style.display = 'none';
                 if (this.resumeOverlayElement) {
@@ -134,7 +134,7 @@ class UIManager {
                 
             case GameState.PLAYING:
                 this.instructionsElement.style.display = 'none';
-                this.shipBuilderElement.style.display = 'none';
+                this.shipSelectorElement.style.display = 'none';
                 this.crosshairElement.style.display = 'block';
                 this.playersCounterElement.style.display = 'block';
                 if (this.resumeOverlayElement) {
@@ -166,22 +166,63 @@ class UIManager {
             this.changeState(GameState.PLAYING);
         });
         
-        // Ship builder button
-        this.shipBuilderButton.addEventListener('click', () => {
+        // Ship selector button
+        this.shipSelectorButton.addEventListener('click', () => {
             if (this.camera && this.currentState === GameState.MAIN_MENU && !this.isAnimating) {
                 this.startCameraRotation(180, () => {
-                    this.changeState(GameState.SHIP_BUILDER);
+                    this.changeState(GameState.SHIP_SELECTOR);
                 });
             }
         });
         
         // Return button
         this.returnButton.addEventListener('click', () => {
-            if (this.camera && this.currentState === GameState.SHIP_BUILDER && !this.isAnimating) {
+            if (this.camera && this.currentState === GameState.SHIP_SELECTOR && !this.isAnimating) {
                 this.startCameraRotation(180, () => {
                     this.changeState(GameState.MAIN_MENU);
                 });
             }
+        });
+        
+        // Ship option selection
+        const shipOptions = document.querySelectorAll('.ship-option');
+        shipOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                // Remove selected class from all options
+                shipOptions.forEach(opt => opt.style.backgroundColor = 'rgba(255, 255, 255, 0.1)');
+                
+                // Add selected class to clicked option
+                option.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                
+                // Add a subtle glow effect to the selected ship image
+                const images = document.querySelectorAll('.ship-option img');
+                images.forEach(img => {
+                    img.style.boxShadow = 'none';
+                });
+                
+                const selectedImage = option.querySelector('img');
+                if (selectedImage) {
+                    selectedImage.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.8)';
+                }
+                
+                // Store selected ship
+                const shipName = option.querySelector('span').textContent;
+                this.selectedShip = shipName;
+                console.log(`Selected ship: ${shipName}`);
+            });
+            
+            // Add hover effect
+            option.addEventListener('mouseenter', () => {
+                if (option.style.backgroundColor !== 'rgba(255, 255, 255, 0.3)') {
+                    option.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                }
+            });
+            
+            option.addEventListener('mouseleave', () => {
+                if (option.style.backgroundColor !== 'rgba(255, 255, 255, 0.3)') {
+                    option.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                }
+            });
         });
         
         // Resume overlay click
@@ -267,7 +308,7 @@ class UIManager {
         window.cameraAnimating = true;
         
         // Disable buttons during animation
-        if (this.shipBuilderButton) this.shipBuilderButton.disabled = true;
+        if (this.shipSelectorButton) this.shipSelectorButton.disabled = true;
         if (this.returnButton) this.returnButton.disabled = true;
         
         const startRotation = this.camera.rotation.y;
@@ -294,7 +335,7 @@ class UIManager {
                 this.isAnimating = false;
                 
                 // Re-enable buttons
-                if (this.shipBuilderButton) this.shipBuilderButton.disabled = false;
+                if (this.shipSelectorButton) this.shipSelectorButton.disabled = false;
                 if (this.returnButton) this.returnButton.disabled = false;
                 
                 if (callback) callback();
@@ -328,6 +369,11 @@ class UIManager {
     // Get current state
     getState() {
         return this.currentState;
+    }
+    
+    // Get selected ship
+    getSelectedShip() {
+        return this.selectedShip;
     }
     
     // Check if game is in playing state
