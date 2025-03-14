@@ -131,18 +131,24 @@ class UIManager {
             }
         });
         
-        // Resume overlay click
-        if (this.resumeOverlayElement) {
-            this.resumeOverlayElement.addEventListener('click', () => {
+         // Resume overlay click
+         if (this.resumeOverlayElement) {
+            this.resumeOverlayElement.addEventListener('click', (event) => {
                 if (this.currentState === GameState.PLAYING) {
-                    // Request pointer lock again
-                    document.body.requestPointerLock = document.body.requestPointerLock || 
-                                                    document.body.mozRequestPointerLock ||
-                                                    document.body.webkitRequestPointerLock;
-                    document.body.requestPointerLock();
-                    
-                    // Hide the overlay
-                    this.resumeOverlayElement.style.display = 'none';
+                    event.preventDefault();
+                    window.focus();
+        
+                    // Slight delay to reliably regain pointer lock after ESC
+                    setTimeout(() => {
+                        const requestPointerLock = document.body.requestPointerLock ||
+                                                   document.body.mozRequestPointerLock ||
+                                                   document.body.webkitRequestPointerLock;
+        
+                        if (requestPointerLock) {
+                            requestPointerLock.call(document.body);
+                            console.log("Pointer lock requested after 200ms delay for browser compatibility.");
+                        }
+                    }, 200); // CRUCIAL: ~150-200ms delay
                 }
             });
         }
@@ -153,30 +159,16 @@ class UIManager {
         document.addEventListener('webkitpointerlockchange', this.handlePointerLockChange.bind(this));
     }
     
-    // Handle pointer lock change
     handlePointerLockChange() {
-        if (document.pointerLockElement === document.body || 
-            document.mozPointerLockElement === document.body ||
-            document.webkitPointerLockElement === document.body) {
-            // Pointer is locked, we're in game mode
-            console.log("Pointer locked - game mode");
-            
-            // Hide resume overlay if it's visible
-            if (this.resumeOverlayElement) {
-                this.resumeOverlayElement.style.display = 'none';
-            }
-            
-            // If we weren't playing before, start playing
-            if (this.currentState !== GameState.PLAYING) {
-                this.changeState(GameState.PLAYING);
-            }
+        if (!this.resumeOverlayElement) return; // safety check
+    
+        if (document.pointerLockElement === document.body) {
+            console.log("✅ Pointer lock re-engaged successfully.");
+            this.resumeOverlayElement.style.display = 'none';
         } else {
-            // Pointer is unlocked, but we'll keep the game running
-            console.log("Pointer unlocked - continuing game");
-            
-            // If we're in playing state, show the resume overlay
-            if (this.currentState === GameState.PLAYING && this.resumeOverlayElement) {
-                this.resumeOverlayElement.style.display = 'block';
+            console.log("⚠️ Pointer lock lost or failed.");
+            if (this.currentState === GameState.PLAYING) {
+                this.resumeOverlayElement.style.display = 'flex';
             }
         }
     }
