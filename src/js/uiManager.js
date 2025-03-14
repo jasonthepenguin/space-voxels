@@ -20,6 +20,7 @@ class UIManager {
         this.fpsCounterElement = document.getElementById('fps-counter');
         this.playersCounterElement = document.getElementById('players-counter');
         this.resumeOverlayElement = document.getElementById('resume-overlay');
+        this.mobileControlsElement = document.getElementById('mobile-controls');
         
         // Buttons
         this.startButton = document.getElementById('start-button');
@@ -37,9 +38,18 @@ class UIManager {
         // Animation flag to prevent multiple animations
         this.isAnimating = false;
         
+        // Mobile detection
+        this.isMobile = this.detectMobile();
+        
         // Initialize
         this.setupEventListeners();
         this.startFPSCounter();
+    }
+    
+    // Detect if device is mobile
+    detectMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+               (window.innerWidth <= 800 && window.innerHeight <= 900);
     }
     
     // Initialize with game objects
@@ -52,6 +62,41 @@ class UIManager {
         
         // Set initial UI state
         this.changeState(GameState.MAIN_MENU);
+        
+        // Apply mobile-specific adjustments
+        if (this.isMobile) {
+            this.applyMobileAdjustments();
+        }
+    }
+    
+    // Apply mobile-specific UI adjustments
+    applyMobileAdjustments() {
+        // Adjust button sizes and spacing for touch
+        if (this.startButton) {
+            this.startButton.style.padding = '15px 40px';
+            this.startButton.style.margin = '15px 0';
+            this.startButton.style.fontSize = '18px';
+        }
+        
+        if (this.shipBuilderButton) {
+            this.shipBuilderButton.style.padding = '15px 40px';
+            this.shipBuilderButton.style.margin = '15px 0';
+            this.shipBuilderButton.style.fontSize = '18px';
+        }
+        
+        if (this.returnButton) {
+            this.returnButton.style.padding = '15px 40px';
+            this.returnButton.style.fontSize = '18px';
+        }
+        
+        // Update instructions for mobile
+        if (this.instructionsElement) {
+            const mobileTip = document.createElement('p');
+            mobileTip.textContent = 'Mobile controls will appear when you start the game.';
+            mobileTip.style.color = '#4CAF50';
+            mobileTip.style.fontWeight = 'bold';
+            this.instructionsElement.appendChild(mobileTip);
+        }
     }
     
     // Change the game state
@@ -69,6 +114,9 @@ class UIManager {
                 if (this.resumeOverlayElement) {
                     this.resumeOverlayElement.style.display = 'none';
                 }
+                if (this.mobileControlsElement) {
+                    this.mobileControlsElement.style.display = 'none';
+                }
                 break;
                 
             case GameState.SHIP_BUILDER:
@@ -78,6 +126,9 @@ class UIManager {
                 this.playersCounterElement.style.display = 'none';
                 if (this.resumeOverlayElement) {
                     this.resumeOverlayElement.style.display = 'none';
+                }
+                if (this.mobileControlsElement) {
+                    this.mobileControlsElement.style.display = 'none';
                 }
                 break;
                 
@@ -90,11 +141,13 @@ class UIManager {
                     this.resumeOverlayElement.style.display = 'none';
                 }
                 
-                // Request pointer lock
-                document.body.requestPointerLock = document.body.requestPointerLock || 
-                                                document.body.mozRequestPointerLock ||
-                                                document.body.webkitRequestPointerLock;
-                document.body.requestPointerLock();
+                // Only request pointer lock on desktop
+                if (!this.isMobile) {
+                    document.body.requestPointerLock = document.body.requestPointerLock || 
+                                                    document.body.mozRequestPointerLock ||
+                                                    document.body.webkitRequestPointerLock;
+                    document.body.requestPointerLock();
+                }
                 
                 // Call the game start callback
                 if (this.gameStartCallback && prevState === GameState.MAIN_MENU) {
@@ -133,50 +186,71 @@ class UIManager {
         
         // Resume overlay click
         if (this.resumeOverlayElement) {
-            this.resumeOverlayElement.addEventListener('click', () => {
+            this.resumeOverlayElement.addEventListener('click', (event) => {
                 if (this.currentState === GameState.PLAYING) {
-                    // Request pointer lock again
-                    document.body.requestPointerLock = document.body.requestPointerLock || 
+                    event.preventDefault();
+                    window.focus();
+                    
+                    // Only handle pointer lock on desktop
+                    if (!this.isMobile) {
+                        // Slight delay to reliably regain pointer lock after ESC
+                        setTimeout(() => {
+                            const requestPointerLock = document.body.requestPointerLock ||
                                                     document.body.mozRequestPointerLock ||
                                                     document.body.webkitRequestPointerLock;
-                    document.body.requestPointerLock();
-                    
-                    // Hide the overlay
-                    this.resumeOverlayElement.style.display = 'none';
+            
+                            if (requestPointerLock) {
+                                requestPointerLock.call(document.body);
+                                console.log("Pointer lock requested after 200ms delay for browser compatibility.");
+                            }
+                        }, 200); // CRUCIAL: ~150-200ms delay
+                    } else {
+                        // For mobile, just hide the overlay
+                        this.resumeOverlayElement.style.display = 'none';
+                    }
                 }
             });
         }
         
-        // Handle pointer lock change
-        document.addEventListener('pointerlockchange', this.handlePointerLockChange.bind(this));
-        document.addEventListener('mozpointerlockchange', this.handlePointerLockChange.bind(this));
-        document.addEventListener('webkitpointerlockchange', this.handlePointerLockChange.bind(this));
+        // Handle pointer lock change (desktop only)
+        if (!this.isMobile) {
+            document.addEventListener('pointerlockchange', this.handlePointerLockChange.bind(this));
+            document.addEventListener('mozpointerlockchange', this.handlePointerLockChange.bind(this));
+            document.addEventListener('webkitpointerlockchange', this.handlePointerLockChange.bind(this));
+        }
+        
+        // Add touch event listeners for mobile
+        if (this.isMobile) {
+            // Prevent default touch actions to avoid browser gestures
+            document.addEventListener('touchmove', (e) => {
+                if (this.currentState === GameState.PLAYING) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // Prevent zoom on double tap
+            let lastTap = 0;
+            document.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 500 && tapLength > 0) {
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            });
+        }
     }
     
-    // Handle pointer lock change
     handlePointerLockChange() {
-        if (document.pointerLockElement === document.body || 
-            document.mozPointerLockElement === document.body ||
-            document.webkitPointerLockElement === document.body) {
-            // Pointer is locked, we're in game mode
-            console.log("Pointer locked - game mode");
-            
-            // Hide resume overlay if it's visible
-            if (this.resumeOverlayElement) {
-                this.resumeOverlayElement.style.display = 'none';
-            }
-            
-            // If we weren't playing before, start playing
-            if (this.currentState !== GameState.PLAYING) {
-                this.changeState(GameState.PLAYING);
-            }
+        if (!this.resumeOverlayElement || this.isMobile) return; // safety check or skip on mobile
+    
+        if (document.pointerLockElement === document.body) {
+            console.log("✅ Pointer lock re-engaged successfully.");
+            this.resumeOverlayElement.style.display = 'none';
         } else {
-            // Pointer is unlocked, but we'll keep the game running
-            console.log("Pointer unlocked - continuing game");
-            
-            // If we're in playing state, show the resume overlay
-            if (this.currentState === GameState.PLAYING && this.resumeOverlayElement) {
-                this.resumeOverlayElement.style.display = 'block';
+            console.log("⚠️ Pointer lock lost or failed.");
+            if (this.currentState === GameState.PLAYING) {
+                this.resumeOverlayElement.style.display = 'flex';
             }
         }
     }
@@ -259,6 +333,11 @@ class UIManager {
     // Check if game is in playing state
     isPlaying() {
         return this.currentState === GameState.PLAYING;
+    }
+    
+    // Check if device is mobile
+    isMobileDevice() {
+        return this.isMobile;
     }
 }
 

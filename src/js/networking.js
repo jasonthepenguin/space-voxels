@@ -2,6 +2,8 @@ import { io } from 'socket.io-client';
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
 
+export let serverTimeOffset = 0;
+
 export function initNetworking(updatePlayerCount) {
     const socket = io(SOCKET_SERVER_URL, {
         transports: ['websocket'],
@@ -35,6 +37,11 @@ export function initNetworking(updatePlayerCount) {
     
     socket.on('playerLeft', (data) => {
         window.removeRemotePlayer(data.id);
+    });
+
+    socket.on('serverTime', (data) => {
+        serverTimeOffset = Date.now() - data.timestamp;
+        console.log("Server time synchronized. Offset:", serverTimeOffset, "ms");
     });
 
     return { socket, playerId: socket.id, isConnected: true };

@@ -69,29 +69,39 @@ export function setupLighting(scene) {
 // Create UI elements (crosshair)
 export function createUI() {
     // Create crosshair
-    const crosshairElement = document.createElement('div');
-    crosshairElement.id = 'crosshair';
-    crosshairElement.style.position = 'absolute';
-    crosshairElement.style.top = '50%';
-    crosshairElement.style.left = '50%';
-    crosshairElement.style.width = '10px';
-    crosshairElement.style.height = '10px';
-    crosshairElement.style.borderRadius = '50%';
-    crosshairElement.style.border = '1px solid rgba(255, 255, 255, 0.7)';
-    crosshairElement.style.transform = 'translate(-50%, -50%)';
-    crosshairElement.style.pointerEvents = 'none';
-    crosshairElement.style.display = 'none'; // Hide initially
-    document.body.appendChild(crosshairElement);
+    const crosshairElement = document.getElementById('crosshair');
+    if (!crosshairElement) {
+        const newCrosshairElement = document.createElement('div');
+        newCrosshairElement.id = 'crosshair';
+        newCrosshairElement.style.position = 'absolute';
+        newCrosshairElement.style.top = '50%';
+        newCrosshairElement.style.left = '50%';
+        newCrosshairElement.style.width = '10px';
+        newCrosshairElement.style.height = '10px';
+        newCrosshairElement.style.borderRadius = '50%';
+        newCrosshairElement.style.border = '1px solid rgba(255, 255, 255, 0.7)';
+        newCrosshairElement.style.transform = 'translate(-50%, -50%)';
+        newCrosshairElement.style.pointerEvents = 'none';
+        newCrosshairElement.style.display = 'none'; // Hide initially
+        document.body.appendChild(newCrosshairElement);
+        return newCrosshairElement;
+    }
     
     return crosshairElement;
 }
 
 // Setup pointer lock controls
 export function setupControls() {
-    // Add pointer lock event listeners
-    document.addEventListener('pointerlockchange', handlePointerLockChange);
-    document.addEventListener('mozpointerlockchange', handlePointerLockChange);
-    document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
+    // Check if device is mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                    (window.innerWidth <= 800 && window.innerHeight <= 900);
+    
+    // Only add pointer lock event listeners on desktop
+    if (!isMobile) {
+        document.addEventListener('pointerlockchange', handlePointerLockChange);
+        document.addEventListener('mozpointerlockchange', handlePointerLockChange);
+        document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
+    }
 }
 
 // Handle pointer lock change events

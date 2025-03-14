@@ -2,8 +2,19 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import uiManager, { GameState } from './uiManager.js';
 import { io } from 'socket.io-client';
+import { serverTimeOffset } from './networking.js';
 
-
+// Import mobile controls
+import {
+    initMobileControls,
+    showMobileControls,
+    hideMobileControls,
+    getJoystickValues,
+    getLookDelta,
+    isFireButtonActive,
+    checkIsMobile,
+    updateMobileControlsState
+} from './mobileControls.js';
 
 // Import modules
 import { 
@@ -76,6 +87,10 @@ let mouse = new THREE.Vector2();
 let leftMouseHeld = false;
 let cursorLocked = false;
 
+// Mobile controls
+let isMobile = false;
+let mobileControls = null;
+
 // Weapon system variables
 let lasers = [];
 let laserPool = [];
@@ -137,8 +152,6 @@ window.addOrUpdateRemotePlayer = function(id, data) {
         );
     }
 };
-
-
 
 window.removeRemotePlayer = function(id) {
     const player = remotePlayers[id];
@@ -219,10 +232,29 @@ function init() {
     orbitLines = createOrbitLines(scene, planetData);
 
     // Create planets
-    planets = createPlanets(scene, voxelGeometry, planetData);
+    planets = createPlanets(scene, voxelGeometry, planetData, serverTimeOffset);
 
     // Add Earth's moon
     createMoon(planets);
+
+    // Initialize mobile controls
+    mobileControls = initMobileControls(
+        // Shoot callback
+        () => {
+            if (uiManager.isPlaying() && player) {
+                shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
+            }
+        },
+        // Respawn callback
+        () => {
+            if (gameStarted) {
+                console.log("Respawning all celestial bodies");
+                respawnAllCelestialBodies(sun, planets);
+            }
+        }
+    );
+    
+    isMobile = mobileControls ? mobileControls.isMobile : false;
 
     // Setup event listeners
     setupEventListeners();
@@ -244,6 +276,7 @@ function init() {
     soundsLoaded = true;
     
     console.log("Game initialized successfully");
+    console.log("Mobile device detected:", isMobile);
 }
 
 // Update player count in UI
@@ -274,57 +307,58 @@ function setupEventListeners() {
         keyboard[event.code] = false;
     });
     
-    // Mouse event listeners
-    document.addEventListener('mousedown', (event) => {
-        if (event.button === 0 && uiManager.isPlaying() && player) { // Only shoot if game started and player exists
-            leftMouseHeld = true;
-            shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
-        }
-    });
-    
-    document.addEventListener('mouseup', (event) => {
-        if (event.button === 0) {
-            leftMouseHeld = false;
-        }
-    });
-    
-    // Mouse movement for camera rotation only (not ship rotation)
-    document.addEventListener('mousemove', (event) => {
-        if (uiManager.isPlaying() && player) { // Only rotate camera if game started and player exists
-            // For pointer lock, use movementX/Y
-            // For non-pointer lock, we'll need to calculate movement differently
-            let moveX, moveY;
-            
-            if (document.pointerLockElement === document.body) {
-                moveX = event.movementX;
-                moveY = event.movementY;
-            } else {
-                // When not in pointer lock, we can still allow camera movement
-                // but it will be less smooth without movementX/Y
-                // We can use a fixed value or calculate based on position
-                moveX = event.movementX || (event.clientX - window.innerWidth/2) * 0.1;
-                moveY = event.movementY || (event.clientY - window.innerHeight/2) * 0.1;
+    // Mouse event listeners (only for desktop)
+    if (!isMobile) {
+        document.addEventListener('mousedown', (event) => {
+            if (event.button === 0 && uiManager.isPlaying() && player) { // Only shoot if game started and player exists
+                leftMouseHeld = true;
+                shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
             }
-            
-            const cameraYaw = -moveX * 0.002;
-            const cameraPitch = -moveY * 0.002;
-            
-            // Apply to camera offset angles (stored as properties on the offset vector)
-            if (!cameraOffset.angles) {
-                cameraOffset.angles = { yaw: 0, pitch: 0 };
+        });
+        
+        document.addEventListener('mouseup', (event) => {
+            if (event.button === 0) {
+                leftMouseHeld = false;
             }
-            
-            cameraOffset.angles.yaw += cameraYaw;
-            
-            // Limit vertical rotation to prevent flipping
-            cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
-                                        Math.min(Math.PI/2, 
-                                        cameraOffset.angles.pitch + cameraPitch));
-            
-            // Update camera position
-            updateCameraPosition();
-        }
-    });
+        });
+        
+        // Mouse movement for camera rotation only (not ship rotation)
+        document.addEventListener('mousemove', (event) => {
+            if (uiManager.isPlaying() && player) { // Only rotate camera if game started and player exists
+                // For pointer lock, use movementX/Y
+                // For non-pointer lock, we'll need to calculate movement differently
+                let moveX, moveY;
+                
+                if (document.pointerLockElement === document.body) {
+                    moveX = event.movementX;
+                    moveY = event.movementY;
+                } else {
+                    // When not in pointer lock, we can still allow camera movement
+                    // but it will be less smooth without movementX/Y
+                    moveX = event.movementX || (event.clientX - window.innerWidth/2) * 0.1;
+                    moveY = event.movementY || (event.clientY - window.innerHeight/2) * 0.1;
+                }
+                
+                const cameraYaw = -moveX * 0.002;
+                const cameraPitch = -moveY * 0.002;
+                
+                // Apply to camera offset angles (stored as properties on the offset vector)
+                if (!cameraOffset.angles) {
+                    cameraOffset.angles = { yaw: 0, pitch: 0 };
+                }
+                
+                cameraOffset.angles.yaw += cameraYaw;
+                
+                // Limit vertical rotation to prevent flipping
+                cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
+                                            Math.min(Math.PI/2, 
+                                            cameraOffset.angles.pitch + cameraPitch));
+                
+                // Update camera position
+                updateCameraPosition();
+            }
+        });
+    }
     
     // Window resize event
     window.addEventListener('resize', () => {
@@ -332,8 +366,6 @@ function setupEventListeners() {
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
-    
-
 }
 
 const POSITION_UPDATE_INTERVAL = 100; // milliseconds (10 updates per second)
@@ -346,7 +378,34 @@ function animate() {
     const currentTime = performance.now();
 
     if (uiManager.isPlaying() && player) {
-        handleMovement(player, keyboard, delta, updateCameraPosition);
+        // Handle mobile look controls
+        if (isMobile) {
+            const lookDelta = getLookDelta();
+            
+            if (lookDelta.x !== 0 || lookDelta.y !== 0) {
+                // Initialize camera offset angles if needed
+                if (!cameraOffset.angles) {
+                    cameraOffset.angles = { yaw: 0, pitch: 0 };
+                }
+                
+                // Apply look delta to camera angles
+                cameraOffset.angles.yaw -= lookDelta.x * 0.002;
+                
+                // Limit vertical rotation to prevent flipping
+                cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
+                                            Math.min(Math.PI/2, 
+                                            cameraOffset.angles.pitch - lookDelta.y * 0.002));
+            }
+            
+            // Update mobile controls state
+            updateMobileControlsState();
+        }
+        
+        // Handle player movement with mobile controls if on mobile
+        handleMovement(player, keyboard, delta, updateCameraPosition, isMobile ? {
+            isMobile: true,
+            getJoystickValues: getJoystickValues
+        } : null);
 
         if (isConnected && socket && currentTime - lastPositionUpdate > POSITION_UPDATE_INTERVAL) {
             socket.volatile.emit('updatePosition', {
@@ -395,11 +454,13 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-
 // Update camera position based on player position and rotation
 function updateCameraPosition() {
     if (player) {
-        updatePlayerCamera(player, camera, cameraOffset);
+        updatePlayerCamera(player, camera, cameraOffset, isMobile ? {
+            isMobile: true,
+            getLookDelta: getLookDelta
+        } : null);
     }
 }
 
@@ -409,6 +470,12 @@ function startGame() {
     player = createPlayer(scene);
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
+    
+    // Show mobile controls if on mobile
+    if (isMobile) {
+        showMobileControls();
+    }
+    
     sendPlayerReady(socket, isConnected);
 }
 
@@ -435,6 +502,11 @@ function resetGame() {
         laser.visible = false;
     });
     lasers = [];
+    
+    // Hide mobile controls if on mobile
+    if (isMobile) {
+        hideMobileControls();
+    }
     
     // Notify server that player has left game mode
     sendPlayerNotReady(socket, isConnected);
