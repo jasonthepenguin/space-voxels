@@ -71,7 +71,7 @@ export function createPlayer(scene) {
 }
 
 // Handle player movement
-export function handleMovement(player, keyboard, delta, updateCameraPosition) {
+export function handleMovement(player, keyboard, delta, updateCameraPosition, mobileControls = null) {
     if (!player) return;
     
     // Always move forward in the direction the ship is facing
@@ -83,45 +83,84 @@ export function handleMovement(player, keyboard, delta, updateCameraPosition) {
     let targetPitchChange = 0;
     let targetRollChange = 0;
     
-    // Yaw (left/right turning)
-    if (keyboard['KeyA'] || keyboard['ArrowLeft']) {
-        targetYawChange = SHIP_TURN_SPEED * delta;
-        // Allow continuous rolling when turning left
-        targetRollChange = SHIP_ROLL_SPEED * delta;
-    } else if (keyboard['KeyD'] || keyboard['ArrowRight']) {
-        targetYawChange = -SHIP_TURN_SPEED * delta;
-        // Allow continuous rolling when turning right
-        targetRollChange = -SHIP_ROLL_SPEED * delta;
-    } else {
-        // Return roll to neutral when not turning, but only if within a small range
-        // This allows the ship to stay rolled if the player has done a full roll
-        const normalizedRoll = ((player.rotation.z % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    // Check if we have mobile controls
+    if (mobileControls && mobileControls.isMobile) {
+        // Get joystick values
+        const joystickValues = mobileControls.getJoystickValues();
         
-        if (normalizedRoll > 0.1 && normalizedRoll < Math.PI) {
-            // If between 0 and PI, roll clockwise toward 0
-            targetRollChange = -SHIP_ROLL_SPEED * delta;
-        } else if (normalizedRoll > Math.PI && normalizedRoll < Math.PI * 2 - 0.1) {
-            // If between PI and 2*PI, roll counter-clockwise toward 0
-            targetRollChange = SHIP_ROLL_SPEED * delta;
+        // Yaw (left/right turning) based on joystick X
+        if (Math.abs(joystickValues.x) > 0.1) {
+            targetYawChange = -joystickValues.x * SHIP_TURN_SPEED * delta;
+            // Allow continuous rolling when turning
+            targetRollChange = -joystickValues.x * SHIP_ROLL_SPEED * delta;
+        } else {
+            // Return roll to neutral when not turning, but only if within a small range
+            const normalizedRoll = ((player.rotation.z % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            
+            if (normalizedRoll > 0.1 && normalizedRoll < Math.PI) {
+                // If between 0 and PI, roll clockwise toward 0
+                targetRollChange = -SHIP_ROLL_SPEED * delta;
+            } else if (normalizedRoll > Math.PI && normalizedRoll < Math.PI * 2 - 0.1) {
+                // If between PI and 2*PI, roll counter-clockwise toward 0
+                targetRollChange = SHIP_ROLL_SPEED * delta;
+            }
         }
-    }
-    
-    // Pitch (up/down) - now allowing for complete loops
-    if (keyboard['KeyW'] || keyboard['ArrowUp']) {
-        targetPitchChange = -SHIP_PITCH_SPEED * delta;
-    } else if (keyboard['KeyS'] || keyboard['ArrowDown']) {
-        targetPitchChange = SHIP_PITCH_SPEED * delta;
-    } else {
-        // Auto-level pitch when not pressing up/down, but only if within a small range
-        // This allows the ship to stay in its orientation if the player has done a loop
-        const normalizedPitch = ((player.rotation.x % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         
-        if (normalizedPitch > 0.1 && normalizedPitch < Math.PI) {
-            // If between 0 and PI, pitch down toward 0
-            targetPitchChange = -SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
-        } else if (normalizedPitch > Math.PI && normalizedPitch < Math.PI * 2 - 0.1) {
-            // If between PI and 2*PI, pitch up toward 0
-            targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+        // Pitch (up/down) based on joystick Y
+        if (Math.abs(joystickValues.y) > 0.1) {
+            targetPitchChange = joystickValues.y * SHIP_PITCH_SPEED * delta;
+        } else {
+            // Auto-level pitch when not pressing up/down, but only if within a small range
+            const normalizedPitch = ((player.rotation.x % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            
+            if (normalizedPitch > 0.1 && normalizedPitch < Math.PI) {
+                // If between 0 and PI, pitch down toward 0
+                targetPitchChange = -SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+            } else if (normalizedPitch > Math.PI && normalizedPitch < Math.PI * 2 - 0.1) {
+                // If between PI and 2*PI, pitch up toward 0
+                targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+            }
+        }
+    } else {
+        // Keyboard controls for desktop
+        // Yaw (left/right turning)
+        if (keyboard['KeyA'] || keyboard['ArrowLeft']) {
+            targetYawChange = SHIP_TURN_SPEED * delta;
+            // Allow continuous rolling when turning left
+            targetRollChange = SHIP_ROLL_SPEED * delta;
+        } else if (keyboard['KeyD'] || keyboard['ArrowRight']) {
+            targetYawChange = -SHIP_TURN_SPEED * delta;
+            // Allow continuous rolling when turning right
+            targetRollChange = -SHIP_ROLL_SPEED * delta;
+        } else {
+            // Return roll to neutral when not turning, but only if within a small range
+            const normalizedRoll = ((player.rotation.z % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            
+            if (normalizedRoll > 0.1 && normalizedRoll < Math.PI) {
+                // If between 0 and PI, roll clockwise toward 0
+                targetRollChange = -SHIP_ROLL_SPEED * delta;
+            } else if (normalizedRoll > Math.PI && normalizedRoll < Math.PI * 2 - 0.1) {
+                // If between PI and 2*PI, roll counter-clockwise toward 0
+                targetRollChange = SHIP_ROLL_SPEED * delta;
+            }
+        }
+        
+        // Pitch (up/down) - now allowing for complete loops
+        if (keyboard['KeyW'] || keyboard['ArrowUp']) {
+            targetPitchChange = -SHIP_PITCH_SPEED * delta;
+        } else if (keyboard['KeyS'] || keyboard['ArrowDown']) {
+            targetPitchChange = SHIP_PITCH_SPEED * delta;
+        } else {
+            // Auto-level pitch when not pressing up/down, but only if within a small range
+            const normalizedPitch = ((player.rotation.x % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            
+            if (normalizedPitch > 0.1 && normalizedPitch < Math.PI) {
+                // If between 0 and PI, pitch down toward 0
+                targetPitchChange = -SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+            } else if (normalizedPitch > Math.PI && normalizedPitch < Math.PI * 2 - 0.1) {
+                // If between PI and 2*PI, pitch up toward 0
+                targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+            }
         }
     }
     
@@ -139,7 +178,7 @@ export function handleMovement(player, keyboard, delta, updateCameraPosition) {
 }
 
 // Update camera position based on player position and rotation
-export function updateCameraPosition(player, camera, cameraOffset) {
+export function updateCameraPosition(player, camera, cameraOffset, mobileControls = null) {
     if (!player) return; // Don't update if player doesn't exist
     
     // Create a base offset that follows the ship's orientation
@@ -148,7 +187,7 @@ export function updateCameraPosition(player, camera, cameraOffset) {
     const baseOffset = new THREE.Vector3(0, 4, 15);
     baseOffset.applyQuaternion(player.quaternion);
     
-    // Apply additional camera rotation based on mouse movement
+    // Apply additional camera rotation based on mouse movement or touch controls
     if (cameraOffset.angles) {
         // Create a rotation matrix for the additional camera rotation
         const rotationMatrix = new THREE.Matrix4();
