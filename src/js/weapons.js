@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createExplosion } from './celestialBodies.js';
+import { SHIP_CONFIGS } from './player.js';
 
 // Constants
 export const MAX_LASERS = 20;
@@ -192,6 +193,15 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     laser.position.copy(startPos.clone().add(direction.clone().multiplyScalar(distance / 2)));
     laser.lookAt(targetPoint);
     
+    // Set laser color based on ship type if available
+    if (player.userData && player.userData.shipType) {
+        const shipConfig = SHIP_CONFIGS[player.userData.shipType] || SHIP_CONFIGS.default;
+        if (shipConfig && shipConfig.accent) {
+            // Use the ship's accent color for the laser
+            laser.material.color.setHex(shipConfig.accent.color);
+        }
+    }
+    
     // Set laser properties
     laser.life = 0.3;
     laser.target = targetObject;
@@ -207,6 +217,15 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
 
         flash.visible = true;
         flash.life = 0.2; // lifespan in seconds
+        
+        // Set flash color based on ship type if available
+        if (player.userData && player.userData.shipType) {
+            const shipConfig = SHIP_CONFIGS[player.userData.shipType] || SHIP_CONFIGS.default;
+            if (shipConfig && shipConfig.accent) {
+                // Use the ship's accent color for the flash
+                flash.material.color.setHex(shipConfig.accent.color);
+            }
+        }
         
         // Create explosion
         if (targetParent && 

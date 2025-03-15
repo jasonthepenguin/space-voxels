@@ -13,6 +13,9 @@ class UIManager {
         // Current game state
         this.currentState = GameState.MAIN_MENU;
         
+        // Selected ship (default to the first ship)
+        this.selectedShip = 'default';
+        
         // UI Elements
         this.instructionsElement = document.getElementById('instructions');
         this.shipSelectorElement = document.getElementById('ship-builder-ui');
@@ -207,8 +210,8 @@ class UIManager {
                 
                 // Store selected ship
                 const shipName = option.querySelector('span').textContent;
-                this.selectedShip = shipName;
-                console.log(`Selected ship: ${shipName}`);
+                this.selectedShip = shipName === 'Default Ship' ? 'default' : shipName;
+                console.log(`Selected ship: ${this.selectedShip}`);
             });
             
             // Add hover effect
@@ -224,6 +227,22 @@ class UIManager {
                 }
             });
         });
+        
+        // Set default ship as selected in the UI
+        const defaultShipOption = Array.from(shipOptions).find(option => 
+            option.querySelector('span').textContent === 'Default Ship'
+        );
+        
+        if (defaultShipOption) {
+            defaultShipOption.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+            
+            const selectedImage = defaultShipOption.querySelector('img');
+            if (selectedImage) {
+                selectedImage.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.8)';
+            }
+            
+            this.selectedShip = 'default';
+        }
         
         // Resume overlay click
         if (this.resumeOverlayElement) {

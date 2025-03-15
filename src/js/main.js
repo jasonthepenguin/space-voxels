@@ -129,7 +129,9 @@ window.respawnPlanets = function() {
 
 window.addOrUpdateRemotePlayer = function(id, data) {
     if (!remotePlayers[id]) {
-        const remotePlayer = createPlayer(scene);
+        // For remote players, we'll use the default ship type for now
+        // In a future update, we could sync ship types between players
+        const remotePlayer = createPlayer(scene, 'default');
         remotePlayer.name = `remotePlayer_${id}`;
         scene.add(remotePlayer);
         remotePlayers[id] = remotePlayer;
@@ -482,7 +484,13 @@ function handleAutoFire(currentTime) {
 // New function to start the game
 function startGame() {
     gameStarted = true;
-    player = createPlayer(scene);
+    
+    // Get the selected ship type from the UI manager
+    const selectedShipType = uiManager.getSelectedShip();
+    console.log(`Starting game with ship: ${selectedShipType}`);
+    
+    // Create player with the selected ship type
+    player = createPlayer(scene, selectedShipType);
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
     

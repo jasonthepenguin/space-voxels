@@ -193,7 +193,7 @@ canvas {
 }
 /* Ship selector styles */
 .ship-option {
-  width: 30%;
+  width: 45%;
   height: 120px;
   background-color: rgba(255, 255, 255, 0.1);
   border-radius: 5px;
@@ -204,6 +204,7 @@ canvas {
   cursor: pointer;
   transition: all 0.3s ease;
   padding: 10px;
+  margin: 5px;
 }
 
 .ship-option:hover {
@@ -310,13 +311,14 @@ canvas {
   border-radius: 5px;
   text-align: center;
   max-width: 90%;
-  width: 400px;
+  width: 500px;
   z-index: 100;
 }
 
 #ship-builder-ui > div {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  justify-content: space-around;
   margin: 20px 0;
 }
 
