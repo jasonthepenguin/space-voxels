@@ -11,6 +11,7 @@ import {
     hideMobileControls,
     getJoystickValues,
     getLookDelta,
+    isFireButtonHeld,
     isFireButtonActive,
     checkIsMobile,
     updateMobileControlsState
@@ -87,6 +88,12 @@ let raycaster;
 let mouse = new THREE.Vector2();
 let leftMouseHeld = false;
 let cursorLocked = false;
+
+
+// Laser fire cooldown
+let lastShotTime = 0;
+const FIRE_COOLDOWN = 200;
+
 
 // Mobile controls
 let isMobile = false;
@@ -240,10 +247,13 @@ function init() {
 
     // Initialize mobile controls
     mobileControls = initMobileControls(
-        // Shoot callback
         () => {
             if (uiManager.isPlaying() && player) {
-                shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
+                const currentTime = performance.now();
+                if (currentTime - lastShotTime >= FIRE_COOLDOWN) {
+                    shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
+                    lastShotTime = currentTime;
+                }
             }
         }
     );
@@ -297,17 +307,13 @@ function setupEventListeners() {
     
     // Mouse event listeners (only for desktop)
     if (!isMobile) {
+        
         document.addEventListener('mousedown', (event) => {
-            if (event.button === 0 && uiManager.isPlaying() && player) { // Only shoot if game started and player exists
-                leftMouseHeld = true;
-                shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
-            }
+            if (event.button === 0) leftMouseHeld = true;
         });
         
         document.addEventListener('mouseup', (event) => {
-            if (event.button === 0) {
-                leftMouseHeld = false;
-            }
+            if (event.button === 0) leftMouseHeld = false;
         });
         
         // Mouse movement for camera rotation only (not ship rotation)
@@ -395,6 +401,11 @@ function animate() {
             getJoystickValues: getJoystickValues
         } : null);
 
+        // Auto fire handler
+        handleAutoFire(currentTime);
+
+
+
         if (isConnected && socket && currentTime - lastPositionUpdate > POSITION_UPDATE_INTERVAL) {
             socket.volatile.emit('updatePosition', {
                 position: {
@@ -450,6 +461,16 @@ function updateCameraPosition() {
             isMobile: true,
             getLookDelta: getLookDelta
         } : null);
+    }
+}
+
+// Handle auto fire for mobile and desktop
+function handleAutoFire(currentTime) {
+    if (!player || !uiManager.isPlaying()) return;
+
+    if ((leftMouseHeld || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
+        shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
+        lastShotTime = currentTime;
     }
 }
 

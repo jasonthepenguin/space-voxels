@@ -4,6 +4,8 @@ import * as THREE from 'three';
 // Constants
 const JOYSTICK_MAX_DISTANCE = 40; // Maximum distance joystick can move from center
 
+let fireButtonHeld = false;
+
 // State variables
 let isMobile = false;
 let mobileControlsActive = false;
@@ -22,6 +24,11 @@ let joystick;
 let lookArea;
 let fireButton;
 let resetButton;
+
+
+export function isFireButtonHeld() {
+    return fireButtonHeld;
+}
 
 // Initialize mobile controls
 export function initMobileControls(shootCallback, respawnCallback) {
@@ -64,22 +71,23 @@ function setupMobileEventListeners(shootCallback) {
     lookArea.addEventListener('touchmove', handleLookAreaMove, { passive: false });
     lookArea.addEventListener('touchend', handleLookAreaEnd, { passive: false });
     
-    // Fire button events - modified for tap-only
+    // Fire button events - continuous firing support
     fireButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        fireButtonHeld = true;
+
         // Visual feedback for button press
         fireButton.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
         fireButton.style.transform = 'scale(0.95)';
     }, { passive: false });
-    
+
     fireButton.addEventListener('touchend', (e) => {
         e.preventDefault();
+        fireButtonHeld = false;
+
         // Reset button appearance
         fireButton.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
         fireButton.style.transform = 'scale(1)';
-        
-        // Fire on touchend (tap) instead of continuous firing
-        if (shootCallback) shootCallback();
     }, { passive: false });
 }
 
