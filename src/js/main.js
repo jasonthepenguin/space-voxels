@@ -244,13 +244,6 @@ function init() {
             if (uiManager.isPlaying() && player) {
                 shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
             }
-        },
-        // Respawn callback
-        () => {
-            if (gameStarted) {
-                console.log("Respawning all celestial bodies");
-                respawnAllCelestialBodies(sun, planets);
-            }
         }
     );
     
@@ -294,12 +287,6 @@ function setupEventListeners() {
         if (event.code === 'Escape' && gameStarted) {
             event.preventDefault();
             // We'll let the pointer lock handler deal with re-locking
-        }
-        
-        // Respawn all celestial bodies with 'R' key
-        if (event.code === 'KeyR' && gameStarted) {
-            console.log("Respawning all celestial bodies");
-            respawnAllCelestialBodies(sun, planets);
         }
     });
     
