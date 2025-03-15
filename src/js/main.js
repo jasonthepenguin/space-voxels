@@ -122,6 +122,11 @@ const keyboard = {};
 
 const remotePlayers = {};
 
+window.respawnPlanets = function() {
+    respawnAllCelestialBodies(sun, planets);
+    console.log('Planets respawned locally.');
+};
+
 window.addOrUpdateRemotePlayer = function(id, data) {
     if (!remotePlayers[id]) {
         const remotePlayer = createPlayer(scene);
