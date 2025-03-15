@@ -6,22 +6,66 @@ export const SHIP_TURN_SPEED = 1.5; // How quickly the ship rotates
 export const SHIP_PITCH_SPEED = 1.0; // How quickly the ship pitches up/down
 export const SHIP_ROLL_SPEED = 1.2; // How quickly the ship rolls
 
+// Ship configurations
+export const SHIP_CONFIGS = {
+    // Default ship (blue)
+    default: {
+        body: { color: 0x3366cc }, // Blue body
+        wing: { color: 0x888888 }, // Gray wings
+        accent: { color: 0xff3333 }, // Red accents
+        cockpit: { color: 0x66ccff, opacity: 0.7 } // Transparent blue cockpit
+    },
+    // Flowers ship (purple with green accents)
+    "Flowers Ship": {
+        body: { color: 0x8a2be2 }, // Purple body
+        wing: { color: 0x888888 }, // Gray wings
+        accent: { color: 0x32cd32 }, // Green accents
+        cockpit: { color: 0xda70d6, opacity: 0.7 } // Light purple cockpit
+    },
+    // Angel ship (white with gold accents)
+    "Angel Ship": {
+        body: { color: 0xf0f0f0 }, // White body
+        wing: { color: 0xcccccc }, // Light gray wings
+        accent: { color: 0xffd700 }, // Gold accents
+        cockpit: { color: 0xe6e6fa, opacity: 0.7 } // Lavender cockpit
+    },
+    // Chris ship (red with blue accents)
+    "Chris Ship": {
+        body: { color: 0xcc3333 }, // Red body
+        wing: { color: 0x888888 }, // Gray wings
+        accent: { color: 0x3366cc }, // Blue accents
+        cockpit: { color: 0xffcccc, opacity: 0.7 } // Light red cockpit
+    }
+};
+
 // Create player function
-export function createPlayer(scene) {
+export function createPlayer(scene, shipType = 'default') {
     // Create a group to hold all spaceship parts
     const player = new THREE.Group();
     player.position.set(0, 20, 70);
     player.rotation.order = 'YXZ'; // Set rotation order to match camera
     
+    // Get ship configuration (use default if the selected type doesn't exist)
+    const shipConfig = SHIP_CONFIGS[shipType] || SHIP_CONFIGS.default;
+    
+    // Store the ship type on the player object for reference
+    player.userData.shipType = shipType;
+    
     // Materials
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3366cc }); // Blue body
-    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 }); // Gray wings
-    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333 }); // Red accents
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+        color: shipConfig.body.color
+    });
+    const wingMaterial = new THREE.MeshStandardMaterial({ 
+        color: shipConfig.wing.color
+    });
+    const accentMaterial = new THREE.MeshStandardMaterial({ 
+        color: shipConfig.accent.color
+    });
     const cockpitMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x66ccff, 
+        color: shipConfig.cockpit.color, 
         transparent: true, 
-        opacity: 0.7 
-    }); // Transparent blue cockpit
+        opacity: shipConfig.cockpit.opacity 
+    });
     
     // Main body - slightly elongated
     const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);

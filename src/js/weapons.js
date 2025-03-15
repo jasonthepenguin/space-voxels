@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createExplosion } from './celestialBodies.js';
+import { SHIP_CONFIGS } from './player.js';
 
 // Constants
 export const MAX_LASERS = 20;
@@ -37,7 +38,16 @@ export function getLaserFromPool(scene, laserPool, lasers) {
         return newLaser;
     }
     
-    // Recycle oldest active laser
+    // Recycle oldest inactive laser safely
+    for (let i = 0; i < lasers.length; i++) {
+        if (!lasers[i].visible) {
+            const reusableLaser = lasers.splice(i, 1)[0];
+            reusableLaser.visible = true;
+            return reusableLaser;
+        }
+    }
+
+    // If all lasers are active, recycle the oldest laser
     const oldestLaser = lasers.shift();
     oldestLaser.visible = true;
     return oldestLaser;
@@ -76,22 +86,12 @@ export function getFlashFromPool(scene, flashPool) {
 export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets) {
     // Play sound from pool if available
     if (soundsLoaded) {
-        // Find an available sound in the pool
-        const availableSound = soundPool.find(s => !s.isPlaying);
+        const availableSound = soundPool.find(s => s.audio.paused || s.audio.ended);
         if (availableSound) {
-            availableSound.isPlaying = true;
             availableSound.audio.currentTime = 0;
-            availableSound.audio.play()
-                .then(() => {
-                    // Mark as available when playback ends
-                    availableSound.audio.onended = () => {
-                        availableSound.isPlaying = false;
-                    };
-                })
-                .catch(e => {
-                    console.warn('Could not play sound: ', e);
-                    availableSound.isPlaying = false;
-                });
+            availableSound.audio.play().catch(e => {
+                console.warn('Could not play sound:', e);
+            });
         }
     }
     
@@ -193,6 +193,15 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     laser.position.copy(startPos.clone().add(direction.clone().multiplyScalar(distance / 2)));
     laser.lookAt(targetPoint);
     
+    // Set laser color based on ship type if available
+    if (player.userData && player.userData.shipType) {
+        const shipConfig = SHIP_CONFIGS[player.userData.shipType] || SHIP_CONFIGS.default;
+        if (shipConfig && shipConfig.accent) {
+            // Use the ship's accent color for the laser
+            laser.material.color.setHex(shipConfig.accent.color);
+        }
+    }
+    
     // Set laser properties
     laser.life = 0.3;
     laser.target = targetObject;
@@ -203,13 +212,20 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     if (targetObject) {
         const flash = getFlashFromPool(scene, flashPool);
         flash.position.copy(targetPoint);
-        flash.visible = true;
-        flash.name = "Flash"; // Add a name to help with identification
         
-        // Hide flash after a short time
-        setTimeout(() => {
-            flash.visible = false;
-        }, 200);
+        flash.name = "Flash"; // Add a name to help with identification
+
+        flash.visible = true;
+        flash.life = 0.2; // lifespan in seconds
+        
+        // Set flash color based on ship type if available
+        if (player.userData && player.userData.shipType) {
+            const shipConfig = SHIP_CONFIGS[player.userData.shipType] || SHIP_CONFIGS.default;
+            if (shipConfig && shipConfig.accent) {
+                // Use the ship's accent color for the flash
+                flash.material.color.setHex(shipConfig.accent.color);
+            }
+        }
         
         // Create explosion
         if (targetParent && 
@@ -262,3 +278,15 @@ export function preloadSounds(laserSoundUrl, MAX_SOUNDS) {
     
     return soundPool;
 } 
+
+// Update flashes (reduce life, hide when expired)
+export function updateFlashes(flashPool, delta) {
+    flashPool.forEach(flash => {
+        if (flash.visible) {
+            flash.life -= delta;
+            if (flash.life <= 0) {
+                flash.visible = false;
+            }
+        }
+    });
+}

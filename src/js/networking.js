@@ -44,6 +44,11 @@ export function initNetworking(updatePlayerCount) {
         console.log("Server time synchronized. Offset:", serverTimeOffset, "ms");
     });
 
+    socket.on('respawnPlanets', () => {
+        window.respawnPlanets();
+        console.log('Received planet respawn event from server.');
+    });
+
     return { socket, playerId: socket.id, isConnected: true };
 }
 

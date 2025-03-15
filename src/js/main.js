@@ -11,6 +11,7 @@ import {
     hideMobileControls,
     getJoystickValues,
     getLookDelta,
+    isFireButtonHeld,
     isFireButtonActive,
     checkIsMobile,
     updateMobileControlsState
@@ -41,7 +42,8 @@ import {
     initWeapons,
     shootLaser,
     updateLasers,
-    preloadSounds
+    preloadSounds,
+    updateFlashes
 } from './weapons.js';
 
 import {
@@ -87,6 +89,12 @@ let mouse = new THREE.Vector2();
 let leftMouseHeld = false;
 let cursorLocked = false;
 
+
+// Laser fire cooldown
+let lastShotTime = 0;
+const FIRE_COOLDOWN = 200;
+
+
 // Mobile controls
 let isMobile = false;
 let mobileControls = null;
@@ -114,9 +122,16 @@ const keyboard = {};
 
 const remotePlayers = {};
 
+window.respawnPlanets = function() {
+    respawnAllCelestialBodies(sun, planets);
+    console.log('Planets respawned locally.');
+};
+
 window.addOrUpdateRemotePlayer = function(id, data) {
     if (!remotePlayers[id]) {
-        const remotePlayer = createPlayer(scene);
+        // For remote players, we'll use the default ship type for now
+        // In a future update, we could sync ship types between players
+        const remotePlayer = createPlayer(scene, 'default');
         remotePlayer.name = `remotePlayer_${id}`;
         scene.add(remotePlayer);
         remotePlayers[id] = remotePlayer;
@@ -239,17 +254,13 @@ function init() {
 
     // Initialize mobile controls
     mobileControls = initMobileControls(
-        // Shoot callback
         () => {
             if (uiManager.isPlaying() && player) {
-                shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
-            }
-        },
-        // Respawn callback
-        () => {
-            if (gameStarted) {
-                console.log("Respawning all celestial bodies");
-                respawnAllCelestialBodies(sun, planets);
+                const currentTime = performance.now();
+                if (currentTime - lastShotTime >= FIRE_COOLDOWN) {
+                    shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
+                    lastShotTime = currentTime;
+                }
             }
         }
     );
@@ -295,12 +306,6 @@ function setupEventListeners() {
             event.preventDefault();
             // We'll let the pointer lock handler deal with re-locking
         }
-        
-        // Respawn all celestial bodies with 'R' key
-        if (event.code === 'KeyR' && gameStarted) {
-            console.log("Respawning all celestial bodies");
-            respawnAllCelestialBodies(sun, planets);
-        }
     });
     
     document.addEventListener('keyup', (event) => {
@@ -309,17 +314,13 @@ function setupEventListeners() {
     
     // Mouse event listeners (only for desktop)
     if (!isMobile) {
+        
         document.addEventListener('mousedown', (event) => {
-            if (event.button === 0 && uiManager.isPlaying() && player) { // Only shoot if game started and player exists
-                leftMouseHeld = true;
-                shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
-            }
+            if (event.button === 0) leftMouseHeld = true;
         });
         
         document.addEventListener('mouseup', (event) => {
-            if (event.button === 0) {
-                leftMouseHeld = false;
-            }
+            if (event.button === 0) leftMouseHeld = false;
         });
         
         // Mouse movement for camera rotation only (not ship rotation)
@@ -407,6 +408,11 @@ function animate() {
             getJoystickValues: getJoystickValues
         } : null);
 
+        // Auto fire handler
+        handleAutoFire(currentTime);
+
+
+
         if (isConnected && socket && currentTime - lastPositionUpdate > POSITION_UPDATE_INTERVAL) {
             socket.volatile.emit('updatePosition', {
                 position: {
@@ -451,6 +457,7 @@ function animate() {
 
     updatePlanets(planets, delta);
     updateLasers(lasers, delta);
+    updateFlashes(flashPool, delta);
     renderer.render(scene, camera);
 }
 
@@ -464,10 +471,26 @@ function updateCameraPosition() {
     }
 }
 
+// Handle auto fire for mobile and desktop
+function handleAutoFire(currentTime) {
+    if (!player || !uiManager.isPlaying()) return;
+
+    if ((leftMouseHeld || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
+        shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets);
+        lastShotTime = currentTime;
+    }
+}
+
 // New function to start the game
 function startGame() {
     gameStarted = true;
-    player = createPlayer(scene);
+    
+    // Get the selected ship type from the UI manager
+    const selectedShipType = uiManager.getSelectedShip();
+    console.log(`Starting game with ship: ${selectedShipType}`);
+    
+    // Create player with the selected ship type
+    player = createPlayer(scene, selectedShipType);
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
     
