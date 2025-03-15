@@ -37,7 +37,16 @@ export function getLaserFromPool(scene, laserPool, lasers) {
         return newLaser;
     }
     
-    // Recycle oldest active laser
+    // Recycle oldest inactive laser safely
+    for (let i = 0; i < lasers.length; i++) {
+        if (!lasers[i].visible) {
+            const reusableLaser = lasers.splice(i, 1)[0];
+            reusableLaser.visible = true;
+            return reusableLaser;
+        }
+    }
+
+    // If all lasers are active, recycle the oldest laser
     const oldestLaser = lasers.shift();
     oldestLaser.visible = true;
     return oldestLaser;
@@ -76,22 +85,12 @@ export function getFlashFromPool(scene, flashPool) {
 export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets) {
     // Play sound from pool if available
     if (soundsLoaded) {
-        // Find an available sound in the pool
-        const availableSound = soundPool.find(s => !s.isPlaying);
+        const availableSound = soundPool.find(s => s.audio.paused || s.audio.ended);
         if (availableSound) {
-            availableSound.isPlaying = true;
             availableSound.audio.currentTime = 0;
-            availableSound.audio.play()
-                .then(() => {
-                    // Mark as available when playback ends
-                    availableSound.audio.onended = () => {
-                        availableSound.isPlaying = false;
-                    };
-                })
-                .catch(e => {
-                    console.warn('Could not play sound: ', e);
-                    availableSound.isPlaying = false;
-                });
+            availableSound.audio.play().catch(e => {
+                console.warn('Could not play sound:', e);
+            });
         }
     }
     
@@ -203,13 +202,11 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     if (targetObject) {
         const flash = getFlashFromPool(scene, flashPool);
         flash.position.copy(targetPoint);
-        flash.visible = true;
-        flash.name = "Flash"; // Add a name to help with identification
         
-        // Hide flash after a short time
-        setTimeout(() => {
-            flash.visible = false;
-        }, 200);
+        flash.name = "Flash"; // Add a name to help with identification
+
+        flash.visible = true;
+        flash.life = 0.2; // lifespan in seconds
         
         // Create explosion
         if (targetParent && 
@@ -262,3 +259,15 @@ export function preloadSounds(laserSoundUrl, MAX_SOUNDS) {
     
     return soundPool;
 } 
+
+// Update flashes (reduce life, hide when expired)
+export function updateFlashes(flashPool, delta) {
+    flashPool.forEach(flash => {
+        if (flash.visible) {
+            flash.life -= delta;
+            if (flash.life <= 0) {
+                flash.visible = false;
+            }
+        }
+    });
+}

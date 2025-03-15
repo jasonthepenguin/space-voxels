@@ -41,7 +41,8 @@ import {
     initWeapons,
     shootLaser,
     updateLasers,
-    preloadSounds
+    preloadSounds,
+    updateFlashes
 } from './weapons.js';
 
 import {
@@ -438,6 +439,7 @@ function animate() {
 
     updatePlanets(planets, delta);
     updateLasers(lasers, delta);
+    updateFlashes(flashPool, delta);
     renderer.render(scene, camera);
 }
 
