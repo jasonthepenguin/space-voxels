@@ -93,7 +93,7 @@ function createDefaultShip(player) {
     player.add(gun);
 }
 
-// Flowers Ship (unique design with flower-like elements)
+// Flowers Ship (now made of blocks instead of curved shapes)
 function createFlowersShip(player) {
     // Materials
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x8a2be2 }); // Purple body
@@ -105,20 +105,18 @@ function createFlowersShip(player) {
         opacity: 0.7 
     });
     
-    // Main body - rounded
-    const bodyGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+    // Main body - now a box instead of sphere
+    const bodyGeometry = new THREE.BoxGeometry(2.4, 2.4, 3);
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.scale.z = 1.5; // Elongate slightly
     player.add(body);
     
-    // Cockpit - dome shaped
-    const cockpitGeometry = new THREE.SphereGeometry(0.8, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    // Cockpit - now a box instead of dome
+    const cockpitGeometry = new THREE.BoxGeometry(1.6, 1, 1.2);
     const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-    cockpit.position.set(0, 0.8, -0.5);
-    cockpit.rotation.x = Math.PI;
+    cockpit.position.set(0, 1.2, -0.5);
     player.add(cockpit);
     
-    // Flower petals
+    // Flower petals - now rectangular blocks arranged in a flower pattern
     const petalCount = 5;
     const petalGeometry = new THREE.BoxGeometry(0.8, 0.2, 1.5);
     
@@ -130,28 +128,25 @@ function createFlowersShip(player) {
         player.add(petal);
     }
     
-    // Stem/tail
-    const stemGeometry = new THREE.CylinderGeometry(0.3, 0.5, 3, 8);
+    // Stem/tail - now a box instead of cylinder
+    const stemGeometry = new THREE.BoxGeometry(0.6, 0.6, 3);
     const stem = new THREE.Mesh(stemGeometry, stemMaterial);
     stem.position.set(0, 0, 2);
-    stem.rotation.x = Math.PI / 2;
     player.add(stem);
     
-    // Leaf wings
-    const leafGeometry = new THREE.ConeGeometry(1, 3, 4);
+    // Leaf wings - now boxes instead of cones
+    const leafGeometry = new THREE.BoxGeometry(0.5, 1, 3);
     
     // Left leaf
     const leftLeaf = new THREE.Mesh(leafGeometry, stemMaterial);
     leftLeaf.position.set(-1.5, 0, 0.5);
-    leftLeaf.rotation.z = Math.PI / 2;
-    leftLeaf.rotation.y = Math.PI / 4;
+    leftLeaf.rotation.z = Math.PI / 6;
     player.add(leftLeaf);
     
     // Right leaf
     const rightLeaf = new THREE.Mesh(leafGeometry, stemMaterial);
     rightLeaf.position.set(1.5, 0, 0.5);
-    rightLeaf.rotation.z = -Math.PI / 2;
-    rightLeaf.rotation.y = -Math.PI / 4;
+    rightLeaf.rotation.z = -Math.PI / 6;
     player.add(rightLeaf);
     
     // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
@@ -161,7 +156,7 @@ function createFlowersShip(player) {
     player.add(gun);
 }
 
-// Angel Ship (ethereal, wing-focused design)
+// Angel Ship (now made of blocks instead of curved shapes)
 function createAngelShip(player) {
     // Materials
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 }); // White body
@@ -177,54 +172,53 @@ function createAngelShip(player) {
         opacity: 0.8
     });
     
-    // Main body - sleek and elongated
-    const bodyGeometry = new THREE.CylinderGeometry(0.8, 0.5, 4, 8);
+    // Main body - now a box instead of cylinder
+    const bodyGeometry = new THREE.BoxGeometry(1.6, 1, 4);
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.rotation.x = Math.PI / 2;
     player.add(body);
     
-    // Cockpit - teardrop shaped
-    const cockpitGeometry = new THREE.SphereGeometry(0.7, 16, 16);
+    // Cockpit - now a box instead of sphere
+    const cockpitGeometry = new THREE.BoxGeometry(1.4, 0.8, 1.4);
     const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-    cockpit.position.set(0, 0.4, -1);
-    cockpit.scale.z = 1.3;
+    cockpit.position.set(0, 0.8, -1);
     player.add(cockpit);
     
-    // Angel wings - large and feathered
-    const wingShape = new THREE.Shape();
-    wingShape.moveTo(0, 0);
-    wingShape.quadraticCurveTo(1, 2, 3, 0);
-    wingShape.quadraticCurveTo(2, -0.5, 0, -1);
-    wingShape.quadraticCurveTo(0.5, -0.5, 0, 0);
-    
-    const wingGeometry = new THREE.ShapeGeometry(wingShape);
-    
+    // Angel wings - now made of multiple boxes
     // Left wing
-    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    leftWing.position.set(-0.5, 0, 0);
-    leftWing.rotation.y = Math.PI / 2;
-    player.add(leftWing);
+    createBlockWing(player, -1, 0, 0, wingMaterial, true);
     
-    // Right wing (mirrored)
-    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    rightWing.position.set(0.5, 0, 0);
-    rightWing.rotation.y = -Math.PI / 2;
-    rightWing.scale.x = -1; // Mirror
-    player.add(rightWing);
+    // Right wing
+    createBlockWing(player, 1, 0, 0, wingMaterial, false);
     
-    // Halo
-    const haloGeometry = new THREE.TorusGeometry(0.5, 0.1, 8, 24);
-    const halo = new THREE.Mesh(haloGeometry, accentMaterial);
-    halo.position.set(0, 1, -0.5);
-    halo.rotation.x = Math.PI / 4;
-    player.add(halo);
+    // Halo - now a square frame made of small boxes
+    const haloSize = 0.5;
+    const haloThickness = 0.1;
     
-    // Tail feathers
-    const tailGeometry = new THREE.ConeGeometry(0.8, 2, 5);
+    // Create a square halo with 8 small boxes
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const haloPartGeometry = new THREE.BoxGeometry(haloThickness, haloThickness, haloThickness);
+        const haloPart = new THREE.Mesh(haloPartGeometry, accentMaterial);
+        
+        haloPart.position.set(
+            Math.sin(angle) * haloSize,
+            1 + Math.cos(angle) * haloSize,
+            -0.5
+        );
+        player.add(haloPart);
+    }
+    
+    // Tail feathers - now a box arrangement
+    const tailGeometry = new THREE.BoxGeometry(1.6, 0.4, 2);
     const tail = new THREE.Mesh(tailGeometry, wingMaterial);
     tail.position.set(0, 0, 2);
-    tail.rotation.x = Math.PI / 2;
     player.add(tail);
+    
+    // Additional tail detail
+    const tailTipGeometry = new THREE.BoxGeometry(0.8, 0.2, 0.8);
+    const tailTip = new THREE.Mesh(tailTipGeometry, wingMaterial);
+    tailTip.position.set(0, 0, 3);
+    player.add(tailTip);
     
     // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
     const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
@@ -233,7 +227,28 @@ function createAngelShip(player) {
     player.add(gun);
 }
 
-// Chris Ship (aggressive, angular design)
+// Helper function to create block-based wings
+function createBlockWing(player, xPos, yPos, zPos, material, isLeft) {
+    // Main wing section
+    const wingMainGeometry = new THREE.BoxGeometry(0.2, 0.8, 3);
+    const wingMain = new THREE.Mesh(wingMainGeometry, material);
+    wingMain.position.set(xPos * 2, yPos, zPos);
+    player.add(wingMain);
+    
+    // Wing tip section
+    const wingTipGeometry = new THREE.BoxGeometry(0.2, 1.2, 1.5);
+    const wingTip = new THREE.Mesh(wingTipGeometry, material);
+    wingTip.position.set(xPos * 3, yPos, zPos - 0.5);
+    player.add(wingTip);
+    
+    // Wing connector
+    const wingConnectorGeometry = new THREE.BoxGeometry(xPos * 2, 0.2, 0.8);
+    const wingConnector = new THREE.Mesh(wingConnectorGeometry, material);
+    wingConnector.position.set(xPos, yPos, zPos);
+    player.add(wingConnector);
+}
+
+// Chris Ship (already uses mostly BoxGeometry, minor adjustments)
 function createChrisShip(player) {
     // Materials
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xcc3333 }); // Red body
@@ -250,12 +265,17 @@ function createChrisShip(player) {
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     player.add(body);
     
-    // Front nose - pointed
-    const noseGeometry = new THREE.ConeGeometry(1, 2, 4);
+    // Front nose - now a box instead of cone
+    const noseGeometry = new THREE.BoxGeometry(1.5, 0.8, 2);
     const nose = new THREE.Mesh(noseGeometry, bodyMaterial);
     nose.position.set(0, 0, -3);
-    nose.rotation.x = -Math.PI / 2;
     player.add(nose);
+    
+    // Nose tip - smaller box
+    const noseTipGeometry = new THREE.BoxGeometry(0.8, 0.5, 0.5);
+    const noseTip = new THREE.Mesh(noseTipGeometry, bodyMaterial);
+    noseTip.position.set(0, 0, -4);
+    player.add(noseTip);
     
     // Cockpit - angular
     const cockpitGeometry = new THREE.BoxGeometry(1.2, 0.8, 1.5);
@@ -263,34 +283,32 @@ function createChrisShip(player) {
     cockpit.position.set(0, 0.8, -1);
     player.add(cockpit);
     
-    // Wings - swept back and angular
-    const wingShape = new THREE.Shape();
-    wingShape.moveTo(0, 0);
-    wingShape.lineTo(3, 2);
-    wingShape.lineTo(3, 2.5);
-    wingShape.lineTo(0, 0.5);
-    wingShape.lineTo(0, 0);
-    
-    const wingExtrudeSettings = {
-        steps: 1,
-        depth: 0.2,
-        bevelEnabled: false
-    };
-    
-    const wingGeometry = new THREE.ExtrudeGeometry(wingShape, wingExtrudeSettings);
-    
+    // Wings - now made of multiple boxes
     // Left wing
-    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    leftWing.position.set(-1, -0.5, 0);
-    leftWing.rotation.y = Math.PI / 2;
+    const leftWingGeometry = new THREE.BoxGeometry(0.5, 0.3, 3);
+    const leftWing = new THREE.Mesh(leftWingGeometry, wingMaterial);
+    leftWing.position.set(-2, -0.3, 0);
+    leftWing.rotation.y = Math.PI / 8; // Angle slightly
     player.add(leftWing);
     
-    // Right wing (mirrored)
-    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-    rightWing.position.set(1, -0.5, 0);
-    rightWing.rotation.y = -Math.PI / 2;
-    rightWing.scale.x = -1; // Mirror
+    // Left wing tip
+    const leftWingTipGeometry = new THREE.BoxGeometry(0.5, 0.5, 1.5);
+    const leftWingTip = new THREE.Mesh(leftWingTipGeometry, wingMaterial);
+    leftWingTip.position.set(-3, -0.2, -0.5);
+    player.add(leftWingTip);
+    
+    // Right wing
+    const rightWingGeometry = new THREE.BoxGeometry(0.5, 0.3, 3);
+    const rightWing = new THREE.Mesh(rightWingGeometry, wingMaterial);
+    rightWing.position.set(2, -0.3, 0);
+    rightWing.rotation.y = -Math.PI / 8; // Angle slightly
     player.add(rightWing);
+    
+    // Right wing tip
+    const rightWingTipGeometry = new THREE.BoxGeometry(0.5, 0.5, 1.5);
+    const rightWingTip = new THREE.Mesh(rightWingTipGeometry, wingMaterial);
+    rightWingTip.position.set(3, -0.2, -0.5);
+    player.add(rightWingTip);
     
     // Vertical stabilizers
     const stabilizerGeometry = new THREE.BoxGeometry(0.2, 1.5, 1);
@@ -305,14 +323,14 @@ function createChrisShip(player) {
     rightStabilizer.position.set(1, 0.5, 2);
     player.add(rightStabilizer);
     
-    // Engine exhausts - multiple
-    const exhaustGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.5, 8);
-    
+    // Engine exhausts - now boxes instead of cylinders
     // Create 3 exhausts
     for (let i = -1; i <= 1; i++) {
-        const exhaust = new THREE.Mesh(exhaustGeometry, accentMaterial);
+        const exhaust = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.6, 0.5),
+            accentMaterial
+        );
         exhaust.position.set(i * 0.7, 0, 2.7);
-        exhaust.rotation.x = Math.PI / 2;
         player.add(exhaust);
     }
     
