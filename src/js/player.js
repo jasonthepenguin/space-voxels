@@ -93,65 +93,168 @@ function createDefaultShip(player) {
     player.add(gun);
 }
 
-// Flowers Ship (now made of blocks instead of curved shapes)
+// Flowers Ship (bird-like with L-shaped wings and starship tail - now with light black and yellow colors)
 function createFlowersShip(player) {
-    // Materials
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x8a2be2 }); // Purple body
-    const petalMaterial = new THREE.MeshStandardMaterial({ color: 0xff69b4 }); // Pink petals
-    const stemMaterial = new THREE.MeshStandardMaterial({ color: 0x32cd32 }); // Green stem
+    // Updated Materials with new color scheme
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 }); // Light black (dark gray) body
+    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc00 }); // Yellow wings
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc }); // Silver accent (changed from orange)
+    const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 }); // Darker gray engines
     const cockpitMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xda70d6, 
+        color: 0x444444, 
         transparent: true, 
         opacity: 0.7 
     });
     
-    // Main body - now a box instead of sphere
-    const bodyGeometry = new THREE.BoxGeometry(2.4, 2.4, 3);
+    // Main body - sharper, more angular bird-shaped body
+    const bodyGeometry = new THREE.BoxGeometry(1.8, 1.6, 4);
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     player.add(body);
     
-    // Cockpit - now a box instead of dome
-    const cockpitGeometry = new THREE.BoxGeometry(1.6, 1, 1.2);
+    // Cockpit - more angular, positioned like a bird's head
+    const cockpitGeometry = new THREE.BoxGeometry(1.2, 1.0, 1.4);
     const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-    cockpit.position.set(0, 1.2, -0.5);
+    cockpit.position.set(0, 0.9, -1.8);
     player.add(cockpit);
     
-    // Flower petals - now rectangular blocks arranged in a flower pattern
-    const petalCount = 5;
-    const petalGeometry = new THREE.BoxGeometry(0.8, 0.2, 1.5);
+    // Beak - sharper, more pointed front
+    const beakGeometry = new THREE.BoxGeometry(0.5, 0.4, 1.4);
+    const beak = new THREE.Mesh(beakGeometry, accentMaterial);
+    beak.position.set(0, 0.7, -3.0);
+    player.add(beak);
     
-    for (let i = 0; i < petalCount; i++) {
-        const petal = new THREE.Mesh(petalGeometry, petalMaterial);
-        const angle = (i / petalCount) * Math.PI * 2;
-        petal.position.set(Math.sin(angle) * 1.5, Math.cos(angle) * 1.5, 1);
-        petal.rotation.z = angle;
-        player.add(petal);
+    // Wings - L-shaped design with forward and backward sections
+    // Left wing - forward section
+    const leftWingGeometry = new THREE.BoxGeometry(4.5, 0.3, 1.8);
+    const leftWing = new THREE.Mesh(leftWingGeometry, wingMaterial);
+    leftWing.position.set(-2.5, 0.3, -0.2);
+    // Angle the wing slightly upward and backward
+    leftWing.rotation.z = Math.PI / 10;
+    leftWing.rotation.y = -Math.PI / 15;
+    player.add(leftWing);
+    
+    // Left wing - backward L-section
+    const leftWingBackGeometry = new THREE.BoxGeometry(1.2, 0.3, 3.5);
+    const leftWingBack = new THREE.Mesh(leftWingBackGeometry, wingMaterial);
+    leftWingBack.position.set(-4.2, 0.4, 1.0);
+    // Angle the wing section
+    leftWingBack.rotation.z = Math.PI / 10;
+    player.add(leftWingBack);
+    
+    // Right wing - forward section
+    const rightWingGeometry = new THREE.BoxGeometry(4.5, 0.3, 1.8);
+    const rightWing = new THREE.Mesh(rightWingGeometry, wingMaterial);
+    rightWing.position.set(2.5, 0.3, -0.2);
+    // Angle the wing slightly upward and backward
+    rightWing.rotation.z = -Math.PI / 10;
+    rightWing.rotation.y = Math.PI / 15;
+    player.add(rightWing);
+    
+    // Right wing - backward L-section
+    const rightWingBackGeometry = new THREE.BoxGeometry(1.2, 0.3, 3.5);
+    const rightWingBack = new THREE.Mesh(rightWingBackGeometry, wingMaterial);
+    rightWingBack.position.set(4.2, 0.4, 1.0);
+    // Angle the wing section
+    rightWingBack.rotation.z = -Math.PI / 10;
+    player.add(rightWingBack);
+    
+    // Wing tips - sharper, more angular
+    const leftWingTipGeometry = new THREE.BoxGeometry(1.8, 0.25, 1.0);
+    const leftWingTip = new THREE.Mesh(leftWingTipGeometry, wingMaterial);
+    leftWingTip.position.set(-4.8, 0.5, -0.8);
+    leftWingTip.rotation.z = Math.PI / 8;
+    leftWingTip.rotation.y = Math.PI / 12; // Angle forward slightly
+    player.add(leftWingTip);
+    
+    const rightWingTipGeometry = new THREE.BoxGeometry(1.8, 0.25, 1.0);
+    const rightWingTip = new THREE.Mesh(rightWingTipGeometry, wingMaterial);
+    rightWingTip.position.set(4.8, 0.5, -0.8);
+    rightWingTip.rotation.z = -Math.PI / 8;
+    rightWingTip.rotation.y = -Math.PI / 12; // Angle forward slightly
+    player.add(rightWingTip);
+    
+    // Body accent pieces - to make it sharper
+    const upperAccentGeometry = new THREE.BoxGeometry(0.8, 0.4, 2.5);
+    const upperAccent = new THREE.Mesh(upperAccentGeometry, accentMaterial);
+    upperAccent.position.set(0, 1.0, 0);
+    player.add(upperAccent);
+    
+    // STARSHIP-LIKE TAIL SECTION
+    
+    // Main tail fin - vertical stabilizer
+    const verticalFinGeometry = new THREE.BoxGeometry(0.3, 1.8, 1.5);
+    const verticalFin = new THREE.Mesh(verticalFinGeometry, bodyMaterial);
+    verticalFin.position.set(0, 1.0, 2.5);
+    player.add(verticalFin);
+    
+    // Horizontal stabilizers - like a starship
+    const leftStabilizerGeometry = new THREE.BoxGeometry(1.6, 0.3, 1.2);
+    const leftStabilizer = new THREE.Mesh(leftStabilizerGeometry, wingMaterial);
+    leftStabilizer.position.set(-0.9, 0.2, 2.5);
+    // Angle slightly for style
+    leftStabilizer.rotation.z = Math.PI / 15;
+    player.add(leftStabilizer);
+    
+    const rightStabilizerGeometry = new THREE.BoxGeometry(1.6, 0.3, 1.2);
+    const rightStabilizer = new THREE.Mesh(rightStabilizerGeometry, wingMaterial);
+    rightStabilizer.position.set(0.9, 0.2, 2.5);
+    // Angle slightly for style
+    rightStabilizer.rotation.z = -Math.PI / 15;
+    player.add(rightStabilizer);
+    
+    // Engine section - more mechanical looking
+    const engineBaseGeometry = new THREE.BoxGeometry(1.6, 0.8, 0.8);
+    const engineBase = new THREE.Mesh(engineBaseGeometry, bodyMaterial);
+    engineBase.position.set(0, 0, 2.8);
+    player.add(engineBase);
+    
+    // Engine nozzles - three of them for a starship look
+    const engineNozzleGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.6);
+    
+    // Left engine nozzle
+    const leftNozzle = new THREE.Mesh(engineNozzleGeometry, engineMaterial);
+    leftNozzle.position.set(-0.5, 0, 3.4);
+    player.add(leftNozzle);
+    
+    // Center engine nozzle
+    const centerNozzle = new THREE.Mesh(engineNozzleGeometry, engineMaterial);
+    centerNozzle.position.set(0, 0, 3.4);
+    player.add(centerNozzle);
+    
+    // Right engine nozzle
+    const rightNozzle = new THREE.Mesh(engineNozzleGeometry, engineMaterial);
+    rightNozzle.position.set(0.5, 0, 3.4);
+    player.add(rightNozzle);
+    
+    // Add some engine glow/exhaust effect
+    const exhaustGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.3);
+    const exhaustMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffaa00, 
+        emissive: 0xffaa00,
+        emissiveIntensity: 1
+    });
+    
+    // Add exhaust to each engine
+    for (let i = -1; i <= 1; i++) {
+        const exhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+        exhaust.position.set(i * 0.5, 0, 3.7);
+        player.add(exhaust);
     }
     
-    // Stem/tail - now a box instead of cylinder
-    const stemGeometry = new THREE.BoxGeometry(0.6, 0.6, 3);
-    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-    stem.position.set(0, 0, 2);
-    player.add(stem);
+    // Add some engine details to the back of the L-shaped wings
+    const leftEngineGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const leftEngine = new THREE.Mesh(leftEngineGeometry, engineMaterial);
+    leftEngine.position.set(-4.2, 0.4, 2.5);
+    player.add(leftEngine);
     
-    // Leaf wings - now boxes instead of cones
-    const leafGeometry = new THREE.BoxGeometry(0.5, 1, 3);
-    
-    // Left leaf
-    const leftLeaf = new THREE.Mesh(leafGeometry, stemMaterial);
-    leftLeaf.position.set(-1.5, 0, 0.5);
-    leftLeaf.rotation.z = Math.PI / 6;
-    player.add(leftLeaf);
-    
-    // Right leaf
-    const rightLeaf = new THREE.Mesh(leafGeometry, stemMaterial);
-    rightLeaf.position.set(1.5, 0, 0.5);
-    rightLeaf.rotation.z = -Math.PI / 6;
-    player.add(rightLeaf);
+    const rightEngineGeometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const rightEngine = new THREE.Mesh(rightEngineGeometry, engineMaterial);
+    rightEngine.position.set(4.2, 0.4, 2.5);
+    player.add(rightEngine);
     
     // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
     const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
-    const gun = new THREE.Mesh(gunGeometry, stemMaterial);
+    const gun = new THREE.Mesh(gunGeometry, accentMaterial);
     gun.position.set(0, 0, -2.5);
     player.add(gun);
 }
