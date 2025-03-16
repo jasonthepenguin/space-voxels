@@ -6,38 +6,6 @@ export const SHIP_TURN_SPEED = 1.5; // How quickly the ship rotates
 export const SHIP_PITCH_SPEED = 1.0; // How quickly the ship pitches up/down
 export const SHIP_ROLL_SPEED = 1.2; // How quickly the ship rolls
 
-// Ship configurations
-export const SHIP_CONFIGS = {
-    // Default ship (blue)
-    default: {
-        body: { color: 0x3366cc }, // Blue body
-        wing: { color: 0x888888 }, // Gray wings
-        accent: { color: 0xff3333 }, // Red accents
-        cockpit: { color: 0x66ccff, opacity: 0.7 } // Transparent blue cockpit
-    },
-    // Flowers ship (purple with green accents)
-    "Flowers Ship": {
-        body: { color: 0x8a2be2 }, // Purple body
-        wing: { color: 0x888888 }, // Gray wings
-        accent: { color: 0x32cd32 }, // Green accents
-        cockpit: { color: 0xda70d6, opacity: 0.7 } // Light purple cockpit
-    },
-    // Angel ship (white with gold accents)
-    "Angel Ship": {
-        body: { color: 0xf0f0f0 }, // White body
-        wing: { color: 0xcccccc }, // Light gray wings
-        accent: { color: 0xffd700 }, // Gold accents
-        cockpit: { color: 0xe6e6fa, opacity: 0.7 } // Lavender cockpit
-    },
-    // Chris ship (red with blue accents)
-    "Chris Ship": {
-        body: { color: 0xcc3333 }, // Red body
-        wing: { color: 0x888888 }, // Gray wings
-        accent: { color: 0x3366cc }, // Blue accents
-        cockpit: { color: 0xffcccc, opacity: 0.7 } // Light red cockpit
-    }
-};
-
 // Create player function
 export function createPlayer(scene, shipType = 'default') {
     // Create a group to hold all spaceship parts
@@ -45,26 +13,40 @@ export function createPlayer(scene, shipType = 'default') {
     player.position.set(0, 20, 70);
     player.rotation.order = 'YXZ'; // Set rotation order to match camera
     
-    // Get ship configuration (use default if the selected type doesn't exist)
-    const shipConfig = SHIP_CONFIGS[shipType] || SHIP_CONFIGS.default;
-    
     // Store the ship type on the player object for reference
     player.userData.shipType = shipType;
     
+    // Create the selected ship type
+    switch(shipType) {
+        case 'Flowers Ship':
+            createFlowersShip(player);
+            break;
+        case 'Angel Ship':
+            createAngelShip(player);
+            break;
+        case 'Chris Ship':
+            createChrisShip(player);
+            break;
+        case 'default':
+        default:
+            createDefaultShip(player);
+            break;
+    }
+    
+    scene.add(player);
+    return player;
+}
+
+// Default ship (blue)
+function createDefaultShip(player) {
     // Materials
-    const bodyMaterial = new THREE.MeshStandardMaterial({ 
-        color: shipConfig.body.color
-    });
-    const wingMaterial = new THREE.MeshStandardMaterial({ 
-        color: shipConfig.wing.color
-    });
-    const accentMaterial = new THREE.MeshStandardMaterial({ 
-        color: shipConfig.accent.color
-    });
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3366cc });
+    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xff3333 });
     const cockpitMaterial = new THREE.MeshStandardMaterial({ 
-        color: shipConfig.cockpit.color, 
+        color: 0x66ccff, 
         transparent: true, 
-        opacity: shipConfig.cockpit.opacity 
+        opacity: 0.7 
     });
     
     // Main body - slightly elongated
@@ -104,14 +86,241 @@ export function createPlayer(scene, shipType = 'default') {
     rightEngine.position.set(0.8, -0.1, 1.8);
     player.add(rightEngine);
     
-    // Forward gun/cannon
+    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
     const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
     const gun = new THREE.Mesh(gunGeometry, accentMaterial);
     gun.position.set(0, 0, -2.5);
     player.add(gun);
+}
+
+// Flowers Ship (unique design with flower-like elements)
+function createFlowersShip(player) {
+    // Materials
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x8a2be2 }); // Purple body
+    const petalMaterial = new THREE.MeshStandardMaterial({ color: 0xff69b4 }); // Pink petals
+    const stemMaterial = new THREE.MeshStandardMaterial({ color: 0x32cd32 }); // Green stem
+    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xda70d6, 
+        transparent: true, 
+        opacity: 0.7 
+    });
     
-    scene.add(player);
-    return player;
+    // Main body - rounded
+    const bodyGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.scale.z = 1.5; // Elongate slightly
+    player.add(body);
+    
+    // Cockpit - dome shaped
+    const cockpitGeometry = new THREE.SphereGeometry(0.8, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.8, -0.5);
+    cockpit.rotation.x = Math.PI;
+    player.add(cockpit);
+    
+    // Flower petals
+    const petalCount = 5;
+    const petalGeometry = new THREE.BoxGeometry(0.8, 0.2, 1.5);
+    
+    for (let i = 0; i < petalCount; i++) {
+        const petal = new THREE.Mesh(petalGeometry, petalMaterial);
+        const angle = (i / petalCount) * Math.PI * 2;
+        petal.position.set(Math.sin(angle) * 1.5, Math.cos(angle) * 1.5, 1);
+        petal.rotation.z = angle;
+        player.add(petal);
+    }
+    
+    // Stem/tail
+    const stemGeometry = new THREE.CylinderGeometry(0.3, 0.5, 3, 8);
+    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+    stem.position.set(0, 0, 2);
+    stem.rotation.x = Math.PI / 2;
+    player.add(stem);
+    
+    // Leaf wings
+    const leafGeometry = new THREE.ConeGeometry(1, 3, 4);
+    
+    // Left leaf
+    const leftLeaf = new THREE.Mesh(leafGeometry, stemMaterial);
+    leftLeaf.position.set(-1.5, 0, 0.5);
+    leftLeaf.rotation.z = Math.PI / 2;
+    leftLeaf.rotation.y = Math.PI / 4;
+    player.add(leftLeaf);
+    
+    // Right leaf
+    const rightLeaf = new THREE.Mesh(leafGeometry, stemMaterial);
+    rightLeaf.position.set(1.5, 0, 0.5);
+    rightLeaf.rotation.z = -Math.PI / 2;
+    rightLeaf.rotation.y = -Math.PI / 4;
+    player.add(rightLeaf);
+    
+    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
+    const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
+    const gun = new THREE.Mesh(gunGeometry, stemMaterial);
+    gun.position.set(0, 0, -2.5);
+    player.add(gun);
+}
+
+// Angel Ship (ethereal, wing-focused design)
+function createAngelShip(player) {
+    // Materials
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 }); // White body
+    const wingMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.7
+    });
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 }); // Gold accents
+    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe6e6fa, 
+        transparent: true, 
+        opacity: 0.8
+    });
+    
+    // Main body - sleek and elongated
+    const bodyGeometry = new THREE.CylinderGeometry(0.8, 0.5, 4, 8);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.rotation.x = Math.PI / 2;
+    player.add(body);
+    
+    // Cockpit - teardrop shaped
+    const cockpitGeometry = new THREE.SphereGeometry(0.7, 16, 16);
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.4, -1);
+    cockpit.scale.z = 1.3;
+    player.add(cockpit);
+    
+    // Angel wings - large and feathered
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(0, 0);
+    wingShape.quadraticCurveTo(1, 2, 3, 0);
+    wingShape.quadraticCurveTo(2, -0.5, 0, -1);
+    wingShape.quadraticCurveTo(0.5, -0.5, 0, 0);
+    
+    const wingGeometry = new THREE.ShapeGeometry(wingShape);
+    
+    // Left wing
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    leftWing.position.set(-0.5, 0, 0);
+    leftWing.rotation.y = Math.PI / 2;
+    player.add(leftWing);
+    
+    // Right wing (mirrored)
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    rightWing.position.set(0.5, 0, 0);
+    rightWing.rotation.y = -Math.PI / 2;
+    rightWing.scale.x = -1; // Mirror
+    player.add(rightWing);
+    
+    // Halo
+    const haloGeometry = new THREE.TorusGeometry(0.5, 0.1, 8, 24);
+    const halo = new THREE.Mesh(haloGeometry, accentMaterial);
+    halo.position.set(0, 1, -0.5);
+    halo.rotation.x = Math.PI / 4;
+    player.add(halo);
+    
+    // Tail feathers
+    const tailGeometry = new THREE.ConeGeometry(0.8, 2, 5);
+    const tail = new THREE.Mesh(tailGeometry, wingMaterial);
+    tail.position.set(0, 0, 2);
+    tail.rotation.x = Math.PI / 2;
+    player.add(tail);
+    
+    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
+    const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
+    const gun = new THREE.Mesh(gunGeometry, accentMaterial);
+    gun.position.set(0, 0, -2.5);
+    player.add(gun);
+}
+
+// Chris Ship (aggressive, angular design)
+function createChrisShip(player) {
+    // Materials
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xcc3333 }); // Red body
+    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 }); // Dark wings
+    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0x3366cc }); // Blue accents
+    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffcccc, 
+        transparent: true, 
+        opacity: 0.7 
+    });
+    
+    // Main body - angular and aggressive
+    const bodyGeometry = new THREE.BoxGeometry(2, 1, 5);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    player.add(body);
+    
+    // Front nose - pointed
+    const noseGeometry = new THREE.ConeGeometry(1, 2, 4);
+    const nose = new THREE.Mesh(noseGeometry, bodyMaterial);
+    nose.position.set(0, 0, -3);
+    nose.rotation.x = -Math.PI / 2;
+    player.add(nose);
+    
+    // Cockpit - angular
+    const cockpitGeometry = new THREE.BoxGeometry(1.2, 0.8, 1.5);
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.8, -1);
+    player.add(cockpit);
+    
+    // Wings - swept back and angular
+    const wingShape = new THREE.Shape();
+    wingShape.moveTo(0, 0);
+    wingShape.lineTo(3, 2);
+    wingShape.lineTo(3, 2.5);
+    wingShape.lineTo(0, 0.5);
+    wingShape.lineTo(0, 0);
+    
+    const wingExtrudeSettings = {
+        steps: 1,
+        depth: 0.2,
+        bevelEnabled: false
+    };
+    
+    const wingGeometry = new THREE.ExtrudeGeometry(wingShape, wingExtrudeSettings);
+    
+    // Left wing
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    leftWing.position.set(-1, -0.5, 0);
+    leftWing.rotation.y = Math.PI / 2;
+    player.add(leftWing);
+    
+    // Right wing (mirrored)
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    rightWing.position.set(1, -0.5, 0);
+    rightWing.rotation.y = -Math.PI / 2;
+    rightWing.scale.x = -1; // Mirror
+    player.add(rightWing);
+    
+    // Vertical stabilizers
+    const stabilizerGeometry = new THREE.BoxGeometry(0.2, 1.5, 1);
+    
+    // Left stabilizer
+    const leftStabilizer = new THREE.Mesh(stabilizerGeometry, wingMaterial);
+    leftStabilizer.position.set(-1, 0.5, 2);
+    player.add(leftStabilizer);
+    
+    // Right stabilizer
+    const rightStabilizer = new THREE.Mesh(stabilizerGeometry, wingMaterial);
+    rightStabilizer.position.set(1, 0.5, 2);
+    player.add(rightStabilizer);
+    
+    // Engine exhausts - multiple
+    const exhaustGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.5, 8);
+    
+    // Create 3 exhausts
+    for (let i = -1; i <= 1; i++) {
+        const exhaust = new THREE.Mesh(exhaustGeometry, accentMaterial);
+        exhaust.position.set(i * 0.7, 0, 2.7);
+        exhaust.rotation.x = Math.PI / 2;
+        player.add(exhaust);
+    }
+    
+    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
+    const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
+    const gun = new THREE.Mesh(gunGeometry, accentMaterial);
+    gun.position.set(0, 0, -2.5);
+    player.add(gun);
 }
 
 // Handle player movement
