@@ -1,10 +1,17 @@
 import * as THREE from 'three';
 import { createExplosion } from './celestialBodies.js';
-import { SHIP_CONFIGS } from './player.js';
 
 // Constants
 export const MAX_LASERS = 20;
 export const MAX_FLASHES = 10;
+
+// Ship type to laser color mapping
+const SHIP_LASER_COLORS = {
+    'default': 0xff3333,         // Red for default ship
+    'Flowers Ship': 0x333333,    // Updated to dark gray (black) for Flowers ship
+    'Angel Ship': 0xffd700,      // Gold for Angel ship
+    'Chris Ship': 0x3366cc       // Blue for Chris ship
+};
 
 // Initialize weapon systems
 export function initWeapons(scene) {
@@ -193,13 +200,10 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     laser.position.copy(startPos.clone().add(direction.clone().multiplyScalar(distance / 2)));
     laser.lookAt(targetPoint);
     
-    // Set laser color based on ship type if available
+    // Set laser color based on ship type
     if (player.userData && player.userData.shipType) {
-        const shipConfig = SHIP_CONFIGS[player.userData.shipType] || SHIP_CONFIGS.default;
-        if (shipConfig && shipConfig.accent) {
-            // Use the ship's accent color for the laser
-            laser.material.color.setHex(shipConfig.accent.color);
-        }
+        const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
+        laser.material.color.setHex(laserColor);
     }
     
     // Set laser properties
@@ -218,13 +222,10 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         flash.visible = true;
         flash.life = 0.2; // lifespan in seconds
         
-        // Set flash color based on ship type if available
+        // Set flash color based on ship type
         if (player.userData && player.userData.shipType) {
-            const shipConfig = SHIP_CONFIGS[player.userData.shipType] || SHIP_CONFIGS.default;
-            if (shipConfig && shipConfig.accent) {
-                // Use the ship's accent color for the flash
-                flash.material.color.setHex(shipConfig.accent.color);
-            }
+            const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
+            flash.material.color.setHex(laserColor);
         }
         
         // Create explosion

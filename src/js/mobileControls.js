@@ -5,6 +5,7 @@ import * as THREE from 'three';
 const JOYSTICK_MAX_DISTANCE = 40; // Maximum distance joystick can move from center
 
 let fireButtonHeld = false;
+let boostButtonHeld = false;
 
 // State variables
 let isMobile = false;
@@ -23,11 +24,16 @@ let joystickArea;
 let joystick;
 let lookArea;
 let fireButton;
+let boostButton;
 let resetButton;
 
 
 export function isFireButtonHeld() {
     return fireButtonHeld;
+}
+
+export function isBoostActive() {
+    return boostButtonHeld;
 }
 
 // Initialize mobile controls
@@ -46,6 +52,12 @@ export function initMobileControls(shootCallback, respawnCallback) {
         console.error('Mobile control elements not found');
         return;
     }
+    
+    // Create boost button
+    boostButton = document.createElement('div');
+    boostButton.id = 'mobile-boost-button';
+    boostButton.textContent = 'BOOST';
+    mobileControls.appendChild(boostButton);
     
     // Setup event listeners for mobile controls
     setupMobileEventListeners(shootCallback);
@@ -88,6 +100,25 @@ function setupMobileEventListeners(shootCallback) {
         // Reset button appearance
         fireButton.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
         fireButton.style.transform = 'scale(1)';
+    }, { passive: false });
+    
+    // Boost button events
+    boostButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        boostButtonHeld = true;
+        
+        // Visual feedback for button press
+        boostButton.style.backgroundColor = 'rgba(0, 191, 255, 0.8)';
+        boostButton.style.transform = 'scale(0.95)';
+    }, { passive: false });
+    
+    boostButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        boostButtonHeld = false;
+        
+        // Reset button appearance
+        boostButton.style.backgroundColor = 'rgba(0, 191, 255, 0.5)';
+        boostButton.style.transform = 'scale(1)';
     }, { passive: false });
 }
 
