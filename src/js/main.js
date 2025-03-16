@@ -128,6 +128,11 @@ const DEFAULT_FOV = 75;
 const BOOST_FOV = 85;
 const FOV_TRANSITION_SPEED = 5; // Speed of FOV transition
 
+// Add these variables near the top with other game state variables
+let speedLines = [];
+let lastSpeedLineTime = 0;
+const SPEED_LINE_INTERVAL = 100; // ms between new speed lines
+
 window.respawnPlanets = function() {
     respawnAllCelestialBodies(sun, planets);
     console.log('Planets respawned locally.');
@@ -294,6 +299,11 @@ function init() {
     
     console.log("Game initialized successfully");
     console.log("Mobile device detected:", isMobile);
+
+    // Create boost indicator
+    const boostIndicator = document.createElement('div');
+    boostIndicator.id = 'boost-indicator';
+    document.body.appendChild(boostIndicator);
 }
 
 // Update player count in UI
@@ -439,6 +449,14 @@ function animate() {
 
         // Handle FOV changes for boost effect
         updateFOV(delta, player.userData.boostActive);
+
+        // Handle speed lines for boost effect
+        if (player.userData.boostActive) {
+            if (currentTime - lastSpeedLineTime > SPEED_LINE_INTERVAL) {
+                createSpeedLine();
+                lastSpeedLineTime = currentTime;
+            }
+        }
     }
 
     // Interpolate remote players
@@ -468,6 +486,17 @@ function animate() {
     updatePlanets(planets, delta);
     updateLasers(lasers, delta);
     updateFlashes(flashPool, delta);
+
+    // Update boost indicator
+    const boostIndicator = document.getElementById('boost-indicator');
+    if (boostIndicator) {
+        if (player && player.userData.boostActive) {
+            boostIndicator.style.opacity = '1';
+        } else {
+            boostIndicator.style.opacity = '0';
+        }
+    }
+
     renderer.render(scene, camera);
 }
 
@@ -566,4 +595,61 @@ function updateFOV(delta, boostActive) {
         }
         camera.updateProjectionMatrix();
     }
+    
+    // Add motion blur effect when boosting
+    if (boostActive) {
+        if (!window.boostOverlay) {
+            createBoostOverlay();
+        }
+        window.boostOverlay.style.opacity = '0.4'; // Show the overlay
+    } else if (window.boostOverlay) {
+        window.boostOverlay.style.opacity = '0'; // Hide the overlay
+    }
+}
+
+// Create a boost overlay element for motion blur effect
+function createBoostOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'boost-overlay';
+    overlay.style.position = 'absolute';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.background = 'radial-gradient(circle, transparent 60%, rgba(255,255,255,0.3) 100%)';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.zIndex = '90';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s ease';
+    document.body.appendChild(overlay);
+    window.boostOverlay = overlay;
+}
+
+// Add this function to create speed lines
+function createSpeedLine() {
+    const line = document.createElement('div');
+    line.className = 'speed-line';
+    
+    // Random position and size
+    const y = Math.random() * window.innerHeight;
+    const width = 20 + Math.random() * 100;
+    const height = 1 + Math.random() * 2;
+    
+    line.style.top = `${y}px`;
+    line.style.width = `${width}px`;
+    line.style.height = `${height}px`;
+    line.style.left = `${Math.random() * 20}%`;
+    
+    // Random rotation for more dynamic effect
+    const angle = -10 + Math.random() * 20;
+    line.style.transform = `rotate(${angle}deg)`;
+    
+    document.body.appendChild(line);
+    
+    // Remove the line after animation completes
+    setTimeout(() => {
+        if (line.parentNode) {
+            line.parentNode.removeChild(line);
+        }
+    }, 500);
 }
