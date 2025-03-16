@@ -142,7 +142,7 @@ window.addOrUpdateRemotePlayer = function(id, data) {
     if (!remotePlayers[id]) {
         // For remote players, we'll use the default ship type for now
         // In a future update, we could sync ship types between players
-        const remotePlayer = createPlayer(scene, 'default');
+        const remotePlayer = createPlayer(scene, data.shipType || 'default');
         remotePlayer.name = `remotePlayer_${id}`;
         scene.add(remotePlayer);
         remotePlayers[id] = remotePlayer;
@@ -538,7 +538,7 @@ function startGame() {
         showMobileControls();
     }
     
-    sendPlayerReady(socket, isConnected);
+    sendPlayerReady(socket, isConnected, selectedShipType);
 }
 
 // New function to reset the game state
