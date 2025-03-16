@@ -8,7 +8,7 @@ export const MAX_FLASHES = 10;
 // Ship type to laser color mapping
 const SHIP_LASER_COLORS = {
     'default': 0xff3333,         // Red for default ship
-    'Flowers Ship': 0x32cd32,    // Green for Flowers ship
+    'Flowers Ship': 0x333333,    // Updated to dark gray (black) for Flowers ship
     'Angel Ship': 0xffd700,      // Gold for Angel ship
     'Chris Ship': 0x3366cc       // Blue for Chris ship
 };
