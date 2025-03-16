@@ -191,6 +191,31 @@ canvas {
   bottom: -20px;
   color: rgba(255, 255, 255, 0.7);
 }
+/* New boost button styling */
+#mobile-boost-button {
+  position: absolute;
+  bottom: 20px;
+  left: 160px;
+  width: 70px;
+  height: 70px;
+  background-color: rgba(0, 191, 255, 0.5);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  touch-action: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, background-color 0.1s;
+}
+#mobile-boost-button::after {
+  content: 'HOLD';
+  font-size: 14px;
+  position: absolute;
+  bottom: -20px;
+  color: rgba(255, 255, 255, 0.7);
+}
 /* Ship selector styles */
 .ship-option {
   width: 45%;

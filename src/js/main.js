@@ -14,7 +14,8 @@ import {
     isFireButtonHeld,
     isFireButtonActive,
     checkIsMobile,
-    updateMobileControlsState
+    updateMobileControlsState,
+    isBoostActive
 } from './mobileControls.js';
 
 // Import modules
@@ -121,6 +122,11 @@ const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 const keyboard = {};
 
 const remotePlayers = {};
+
+// FOV constants
+const DEFAULT_FOV = 75;
+const BOOST_FOV = 85;
+const FOV_TRANSITION_SPEED = 5; // Speed of FOV transition
 
 window.respawnPlanets = function() {
     respawnAllCelestialBodies(sun, planets);
@@ -405,7 +411,8 @@ function animate() {
         // Handle player movement with mobile controls if on mobile
         handleMovement(player, keyboard, delta, updateCameraPosition, isMobile ? {
             isMobile: true,
-            getJoystickValues: getJoystickValues
+            getJoystickValues: getJoystickValues,
+            isBoostActive: isBoostActive
         } : null);
 
         // Auto fire handler
@@ -429,6 +436,9 @@ function animate() {
 
             lastPositionUpdate = currentTime;
         }
+
+        // Handle FOV changes for boost effect
+        updateFOV(delta, player.userData.boostActive);
     }
 
     // Interpolate remote players
@@ -540,3 +550,20 @@ window.addEventListener('load', function() {
     console.log("Window loaded, initializing game...");
     init();
 });
+
+// New function to handle FOV transitions
+function updateFOV(delta, boostActive) {
+    if (!camera) return;
+    
+    const targetFOV = boostActive ? BOOST_FOV : DEFAULT_FOV;
+    
+    // Smoothly transition FOV
+    if (Math.abs(camera.fov - targetFOV) > 0.1) {
+        if (camera.fov < targetFOV) {
+            camera.fov = Math.min(camera.fov + FOV_TRANSITION_SPEED * delta * 60, targetFOV);
+        } else {
+            camera.fov = Math.max(camera.fov - FOV_TRANSITION_SPEED * delta * 60, targetFOV);
+        }
+        camera.updateProjectionMatrix();
+    }
+}

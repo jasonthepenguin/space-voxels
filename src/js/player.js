@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 // Ship movement parameters
 export const SHIP_SPEED = 15; // Constant forward speed
+export const SHIP_BOOST_MULTIPLIER = 3; // 20% speed boost
 export const SHIP_TURN_SPEED = 1.5; // How quickly the ship rotates
 export const SHIP_PITCH_SPEED = 1.0; // How quickly the ship pitches up/down
 export const SHIP_ROLL_SPEED = 1.2; // How quickly the ship rolls
@@ -448,9 +449,22 @@ function createChrisShip(player) {
 export function handleMovement(player, keyboard, delta, updateCameraPosition, mobileControls = null) {
     if (!player) return;
     
+    // Check for boost (Shift key or mobile boost button)
+    const boostActive = keyboard['ShiftLeft'] || keyboard['ShiftRight'] || 
+                        (mobileControls && mobileControls.isBoostActive && mobileControls.isBoostActive());
+    
+    // Store boost state on player for FOV effects
+    player.userData.boostActive = boostActive;
+    
+    // Apply boost multiplier to speed if boost is active
+    const speedMultiplier = boostActive ? 2.0 : 1.0;
+    
+    // Calculate speed with boost if active
+    const currentSpeed = SHIP_SPEED * speedMultiplier;
+    
     // Always move forward in the direction the ship is facing
     const forwardDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
-    player.position.add(forwardDirection.multiplyScalar(SHIP_SPEED * delta));
+    player.position.add(forwardDirection.multiplyScalar(currentSpeed * delta));
     
     // Handle turning with smooth rotation
     let targetYawChange = 0;
