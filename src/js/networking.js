@@ -22,7 +22,10 @@ export function initNetworking(updatePlayerCount) {
     socket.on('roomState', (state) => {
         for (const id in state.players) {
             if (id !== socket.id) {
-                window.addOrUpdateRemotePlayer(id, state.players[id]);
+                window.addOrUpdateRemotePlayer(id, {
+                    ...state.players[id],
+                    shipType: state.players[id].shipType || 'default'
+                });
             }
         }
     });
@@ -52,8 +55,8 @@ export function initNetworking(updatePlayerCount) {
     return { socket, playerId: socket.id, isConnected: true };
 }
 
-export function sendPlayerReady(socket, isConnected) {
-    if (isConnected) socket.emit('playerReady');
+export function sendPlayerReady(socket, isConnected, shipType = 'default') {
+    if (isConnected) socket.emit('playerReady', { shipType });
 }
 
 export function sendPlayerNotReady(socket, isConnected) {
