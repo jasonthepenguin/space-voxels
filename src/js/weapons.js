@@ -273,7 +273,9 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         if (hitRemotePlayer && socket) {
             console.log(`Sending playerHit event for player: ${hitRemotePlayer}`);
             
-            // Create a visual indicator at the hit point
+            // Remove the debug hit marker visualization
+            // We're commenting out this code to hide the collision shape
+            /*
             const hitMarker = new THREE.Mesh(
                 new THREE.SphereGeometry(1, 8, 8),
                 new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true })
@@ -283,6 +285,12 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             
             // Remove after 1 second
             setTimeout(() => scene.remove(hitMarker), 1000);
+            */
+            
+            // Show elimination message
+            if (window.uiManager) {
+                window.uiManager.showEliminationMessage(100);
+            }
             
             socket.emit('playerHit', { 
                 targetId: hitRemotePlayer,

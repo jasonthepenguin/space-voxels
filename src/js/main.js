@@ -330,6 +330,9 @@ function init() {
     const boostIndicator = document.createElement('div');
     boostIndicator.id = 'boost-indicator';
     document.body.appendChild(boostIndicator);
+
+    // Make UI Manager accessible globally for other modules
+    window.uiManager = uiManager;
 }
 
 // Update player count in UI
