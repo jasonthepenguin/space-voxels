@@ -44,6 +44,11 @@ class UIManager {
         // Mobile detection
         this.isMobile = this.detectMobile();
         
+        // Add a container for elimination messages
+        this.eliminationContainer = document.createElement('div');
+        this.eliminationContainer.id = 'elimination-container';
+        document.body.appendChild(this.eliminationContainer);
+        
         // Initialize
         this.setupEventListeners();
         this.startFPSCounter();
@@ -403,6 +408,61 @@ class UIManager {
     // Check if device is mobile
     isMobileDevice() {
         return this.isMobile;
+    }
+    
+    // Add a new method to show elimination message
+    showEliminationMessage(points = 100) {
+        // Add screen flash effect
+        this.showScreenFlash();
+        
+        // Create message element
+        const messageElement = document.createElement('div');
+        messageElement.className = 'elimination-message';
+        messageElement.innerHTML = `<span>Player Molested!</span> <span class="points">+${points}</span>`;
+        
+        // Add to container
+        this.eliminationContainer.appendChild(messageElement);
+        
+        // Create a random rotation for added intensity
+        const randomRotation = Math.random() * 6 - 3; // Between -3 and +3 degrees
+        
+        // Trigger animation with more intense effects
+        setTimeout(() => {
+            messageElement.classList.add('show');
+            messageElement.style.transform = `translateY(0) scale(1.1) rotate(${randomRotation}deg)`;
+            
+            // Add shake animation
+            messageElement.style.animation = 'message-shake 0.1s ease-in-out alternate infinite';
+            
+            // Remove after animation completes with more dramatic exit
+            setTimeout(() => {
+                messageElement.classList.add('fade-out');
+                messageElement.style.animation = '';
+                messageElement.style.transform = `translateY(-30px) scale(1.3) rotate(${-randomRotation * 2}deg)`;
+                
+                setTimeout(() => {
+                    this.eliminationContainer.removeChild(messageElement);
+                }, 600); // Slightly longer fade out duration
+            }, 1800); // Show a bit longer before fading
+        }, 10); // Small delay to ensure DOM is updated
+    }
+    
+    // Add this method to the UIManager class
+    showScreenFlash() {
+        // Create a full-screen flash element
+        const flashElement = document.createElement('div');
+        flashElement.className = 'screen-flash';
+        document.body.appendChild(flashElement);
+        
+        // Trigger the flash animation
+        setTimeout(() => {
+            flashElement.classList.add('active');
+            
+            // Remove after animation completes
+            setTimeout(() => {
+                document.body.removeChild(flashElement);
+            }, 300); // Flash duration
+        }, 10);
     }
 }
 

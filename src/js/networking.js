@@ -51,6 +51,29 @@ export function initNetworking(updatePlayerCount) {
         window.respawnPlanets();
         console.log('Received planet respawn event from server.');
     });
+    
+    // Add new event handler for player hit
+    socket.on('playerHit', (data) => {
+        console.log(`Received playerHit event for: ${data.targetId}, our ID: ${socket.id}`);
+        if (data.targetId === socket.id) {
+            // We were hit, respawn our local player
+            console.log("We were hit! Respawning local player...");
+            window.respawnLocalPlayer();
+        } else {
+            // Another player was hit, respawn them
+            console.log(`Remote player ${data.targetId} was hit, respawning them`);
+            window.respawnRemotePlayer(data.targetId, data.position);
+        }
+    });
+
+    // Add a heartbeat mechanism to verify connectivity
+    setInterval(() => {
+        if (socket && socket.connected) {
+            console.log("Socket connection is active");
+        } else {
+            console.warn("Socket connection is not active!");
+        }
+    }, 5000);
 
     return { socket, playerId: socket.id, isConnected: true };
 }

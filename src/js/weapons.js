@@ -90,7 +90,7 @@ export function getFlashFromPool(scene, flashPool) {
 }
 
 // Shoot a laser
-export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets) {
+export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets, socket, remotePlayersRef) {
     // Play sound from pool if available
     if (soundsLoaded) {
         const availableSound = soundPool.find(s => s.audio.paused || s.audio.ended);
@@ -140,6 +140,8 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     });
     
     let targetPoint, targetObject, targetParent, instanceId;
+    let hitRemotePlayer = null;
+    
     if (intersects.length > 0) {
         // Filter out objects to ignore and anything too close to the player
         const filteredIntersects = intersects.filter(intersect => {
@@ -162,6 +164,45 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             // Hit something valid
             targetPoint = filteredIntersects[0].point;
             targetObject = filteredIntersects[0].object;
+            
+            // Check if we hit a remote player
+            if (remotePlayersRef && Object.keys(remotePlayersRef).length > 0) {
+                console.log("Checking for remote player hits among", Object.keys(remotePlayersRef).length, "players");
+                
+                // Check if the hit object is part of a remote player
+                for (const playerId in remotePlayersRef) {
+                    const remotePlayer = remotePlayersRef[playerId];
+                    
+                    // Debug the remote player structure
+                    console.log(`Remote player ${playerId} structure:`, remotePlayer);
+                    
+                    // The remote player IS the mesh in your implementation
+                    const isDirectHit = targetObject === remotePlayer;
+                    
+                    // Check if it's a child of the remote player
+                    let isChildHit = false;
+                    if (remotePlayer.children && remotePlayer.children.length > 0) {
+                        // Recursive function to check all descendants
+                        const checkChildren = (parent) => {
+                            for (const child of parent.children) {
+                                if (child === targetObject) return true;
+                                if (child.children && child.children.length > 0) {
+                                    if (checkChildren(child)) return true;
+                                }
+                            }
+                            return false;
+                        };
+                        
+                        isChildHit = checkChildren(remotePlayer);
+                    }
+                    
+                    if (isDirectHit || isChildHit) {
+                        hitRemotePlayer = playerId;
+                        console.log(`Hit remote player: ${playerId}`);
+                        break;
+                    }
+                }
+            }
             
             // Capture the instance ID if we hit an instanced mesh
             if (targetObject.isInstancedMesh) {
@@ -226,6 +267,39 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         if (player.userData && player.userData.shipType) {
             const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
             flash.material.color.setHex(laserColor);
+        }
+        
+        // If we hit a remote player, send a hit event to the server
+        if (hitRemotePlayer && socket) {
+            console.log(`Sending playerHit event for player: ${hitRemotePlayer}`);
+            
+            // Remove the debug hit marker visualization
+            // We're commenting out this code to hide the collision shape
+            /*
+            const hitMarker = new THREE.Mesh(
+                new THREE.SphereGeometry(1, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true })
+            );
+            hitMarker.position.copy(targetPoint);
+            scene.add(hitMarker);
+            
+            // Remove after 1 second
+            setTimeout(() => scene.remove(hitMarker), 1000);
+            */
+            
+            // Show elimination message
+            if (window.uiManager) {
+                window.uiManager.showEliminationMessage(100);
+            }
+            
+            socket.emit('playerHit', { 
+                targetId: hitRemotePlayer,
+                position: {
+                    x: Math.random() * 100 - 50,
+                    y: Math.random() * 50 + 10,
+                    z: Math.random() * 100 - 50
+                }
+            });
         }
         
         // Create explosion
