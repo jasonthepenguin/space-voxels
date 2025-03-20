@@ -86,8 +86,6 @@ let player = null; // Player object - initialized as null
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
 let crosshair;
 let raycaster;
-let mouse = new THREE.Vector2();
-let leftMouseHeld = false;
 let cursorLocked = false;
 
 
@@ -119,8 +117,6 @@ const textureLoader = new THREE.TextureLoader();
 const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 // Keyboard state
-const keyboard = {};
-
 const remotePlayers = {};
 
 // FOV constants
@@ -132,6 +128,15 @@ const FOV_TRANSITION_SPEED = 5; // Speed of FOV transition
 let speedLines = [];
 let lastSpeedLineTime = 0;
 const SPEED_LINE_INTERVAL = 100; // ms between new speed lines
+
+// Import desktop controls properly and use its exported functions
+import { 
+    initDesktopControls, 
+    isKeyPressed, 
+    isLeftMouseHeld, 
+    isRightMouseHeld,
+    getMouseMovement
+} from './desktopControls.js';
 
 window.respawnPlanets = function() {
     respawnAllCelestialBodies(sun, planets);
@@ -305,69 +310,14 @@ function updatePlayerCount(count) {
     updatePlayerCountUI(count);
 }
 
-function setupEventListeners() {
-    // Keyboard event listeners
-    document.addEventListener('keydown', (event) => {
-        keyboard[event.code] = true;
-        
-        // Prevent default behavior for Escape key when game is started
-        if (event.code === 'Escape' && gameStarted) {
-            event.preventDefault();
-            // We'll let the pointer lock handler deal with re-locking
-        }
-    });
-    
-    document.addEventListener('keyup', (event) => {
-        keyboard[event.code] = false;
-    });
-    
-    // Mouse event listeners (only for desktop)
-    if (!isMobile) {
-        
-        document.addEventListener('mousedown', (event) => {
-            if (event.button === 0) leftMouseHeld = true;
-        });
-        
-        document.addEventListener('mouseup', (event) => {
-            if (event.button === 0) leftMouseHeld = false;
-        });
-        
-        // Mouse movement for camera rotation only (not ship rotation)
-        document.addEventListener('mousemove', (event) => {
-            if (uiManager.isPlaying() && player) { // Only rotate camera if game started and player exists
-                // For pointer lock, use movementX/Y
-                // For non-pointer lock, we'll need to calculate movement differently
-                let moveX, moveY;
-                
-                if (document.pointerLockElement === document.body) {
-                    moveX = event.movementX;
-                    moveY = event.movementY;
-                } else {
-                    // When not in pointer lock, we can still allow camera movement
-                    // but it will be less smooth without movementX/Y
-                    moveX = event.movementX || (event.clientX - window.innerWidth/2) * 0.1;
-                    moveY = event.movementY || (event.clientY - window.innerHeight/2) * 0.1;
-                }
-                
-                const cameraYaw = -moveX * 0.002;
-                const cameraPitch = -moveY * 0.002;
-                
-                // Apply to camera offset angles (stored as properties on the offset vector)
-                if (!cameraOffset.angles) {
-                    cameraOffset.angles = { yaw: 0, pitch: 0 };
-                }
-                
-                cameraOffset.angles.yaw += cameraYaw;
-                
-                // Limit vertical rotation to prevent flipping
-                cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
-                                            Math.min(Math.PI/2, 
-                                            cameraOffset.angles.pitch + cameraPitch));
-                
-                // Update camera position
-                updateCameraPosition();
-            }
-        });
+function setupEventListeners() {            
+    const isMobile = checkIsMobile();
+
+    if (isMobile) {
+        initMobileControls();
+    } else {
+        initDesktopControls();
+        setupControls(); // pointer lock setup from environment.js
     }
     
     // Window resize event
@@ -388,6 +338,26 @@ function animate() {
     const currentTime = performance.now();
 
     if (uiManager.isPlaying() && player) {
+        // Handle desktop look controls
+        if (!isMobile) {
+            const lookDelta = getMouseMovement();
+            
+            if (lookDelta.x !== 0 || lookDelta.y !== 0) {
+                // Initialize camera offset angles if needed
+                if (!cameraOffset.angles) {
+                    cameraOffset.angles = { yaw: 0, pitch: 0 };
+                }
+                
+                // Apply look delta to camera angles
+                cameraOffset.angles.yaw -= lookDelta.x * 0.002;
+                
+                // Limit vertical rotation to prevent flipping
+                cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
+                                            Math.min(Math.PI/2, 
+                                            cameraOffset.angles.pitch - lookDelta.y * 0.002));
+            }
+        }
+        
         // Handle mobile look controls
         if (isMobile) {
             const lookDelta = getLookDelta();
@@ -412,11 +382,13 @@ function animate() {
         }
         
         // Handle player movement with mobile controls if on mobile
-        handleMovement(player, keyboard, delta, updateCameraPosition, isMobile ? {
+        handleMovement(player, delta, updateCameraPosition, isMobile ? {
             isMobile: true,
             getJoystickValues: getJoystickValues,
             isBoostActive: isBoostActive
-        } : null);
+        } : {
+            isKeyPressed: isKeyPressed
+        });
 
         // Auto fire handler
         handleAutoFire(currentTime);
@@ -503,11 +475,11 @@ function updateCameraPosition() {
     }
 }
 
-// Handle auto fire for mobile and desktop
+// Update this function to use the correct left mouse held status from desktop controls
 function handleAutoFire(currentTime) {
     if (!player || !uiManager.isPlaying()) return;
 
-    if ((leftMouseHeld || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
+    if ((isLeftMouseHeld() || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
         shootLaser(
             scene, 
             player, 

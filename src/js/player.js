@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isKeyPressed } from './desktopControls.js';
 
 // Ship movement parameters
 export const SHIP_SPEED = 15; // Constant forward speed
@@ -446,35 +447,28 @@ function createChrisShip(player) {
 }
 
 // Handle player movement
-export function handleMovement(player, keyboard, delta, updateCameraPosition, mobileControls = null) {
+export function handleMovement(player, delta, updateCameraPosition, controls = null) {
     if (!player) return;
     
-    // Check for boost (Shift key or mobile boost button)
-    const boostActive = keyboard['ShiftLeft'] || keyboard['ShiftRight'] || 
-                        (mobileControls && mobileControls.isBoostActive && mobileControls.isBoostActive());
+    const isKeyPressed = controls && controls.isKeyPressed ? controls.isKeyPressed : null;
     
-    // Store boost state on player for FOV effects
+    const boostActive = (isKeyPressed && (isKeyPressed('ShiftLeft') || isKeyPressed('ShiftRight'))) ||
+                        (controls && controls.isBoostActive && controls.isBoostActive());
+    
     player.userData.boostActive = boostActive;
-    
-    // Apply boost multiplier to speed if boost is active
     const speedMultiplier = boostActive ? 2.0 : 1.0;
-    
-    // Calculate speed with boost if active
     const currentSpeed = SHIP_SPEED * speedMultiplier;
     
-    // Always move forward in the direction the ship is facing
     const forwardDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
     player.position.add(forwardDirection.multiplyScalar(currentSpeed * delta));
     
-    // Handle turning with smooth rotation
     let targetYawChange = 0;
     let targetPitchChange = 0;
     let targetRollChange = 0;
     
-    // Check if we have mobile controls
-    if (mobileControls && mobileControls.isMobile) {
+    if (controls && controls.isMobile) {
         // Get joystick values
-        const joystickValues = mobileControls.getJoystickValues();
+        const joystickValues = controls.getJoystickValues();
         
         // Yaw (left/right turning) based on joystick X
         if (Math.abs(joystickValues.x) > 0.1) {
@@ -509,59 +503,41 @@ export function handleMovement(player, keyboard, delta, updateCameraPosition, mo
                 targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
             }
         }
-    } else {
-        // Keyboard controls for desktop
-        // Yaw (left/right turning)
-        if (keyboard['KeyA'] || keyboard['ArrowLeft']) {
+    } else if (isKeyPressed) {
+        // Use isKeyPressed function directly
+        if (isKeyPressed('KeyA') || isKeyPressed('ArrowLeft')) {
             targetYawChange = SHIP_TURN_SPEED * delta;
-            // Allow continuous rolling when turning left
             targetRollChange = SHIP_ROLL_SPEED * delta;
-        } else if (keyboard['KeyD'] || keyboard['ArrowRight']) {
+        } else if (isKeyPressed('KeyD') || isKeyPressed('ArrowRight')) {
             targetYawChange = -SHIP_TURN_SPEED * delta;
-            // Allow continuous rolling when turning right
             targetRollChange = -SHIP_ROLL_SPEED * delta;
         } else {
-            // Return roll to neutral when not turning, but only if within a small range
             const normalizedRoll = ((player.rotation.z % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-            
             if (normalizedRoll > 0.1 && normalizedRoll < Math.PI) {
-                // If between 0 and PI, roll clockwise toward 0
                 targetRollChange = -SHIP_ROLL_SPEED * delta;
             } else if (normalizedRoll > Math.PI && normalizedRoll < Math.PI * 2 - 0.1) {
-                // If between PI and 2*PI, roll counter-clockwise toward 0
                 targetRollChange = SHIP_ROLL_SPEED * delta;
             }
         }
-        
-        // Pitch (up/down) - now allowing for complete loops
-        if (keyboard['KeyW'] || keyboard['ArrowUp']) {
+
+        if (isKeyPressed('KeyW') || isKeyPressed('ArrowUp')) {
             targetPitchChange = -SHIP_PITCH_SPEED * delta;
-        } else if (keyboard['KeyS'] || keyboard['ArrowDown']) {
+        } else if (isKeyPressed('KeyS') || isKeyPressed('ArrowDown')) {
             targetPitchChange = SHIP_PITCH_SPEED * delta;
         } else {
-            // Auto-level pitch when not pressing up/down, but only if within a small range
             const normalizedPitch = ((player.rotation.x % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-            
             if (normalizedPitch > 0.1 && normalizedPitch < Math.PI) {
-                // If between 0 and PI, pitch down toward 0
-                targetPitchChange = -SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+                targetPitchChange = -SHIP_PITCH_SPEED * delta * 0.5;
             } else if (normalizedPitch > Math.PI && normalizedPitch < Math.PI * 2 - 0.1) {
-                // If between PI and 2*PI, pitch up toward 0
-                targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5; // Slower auto-leveling
+                targetPitchChange = SHIP_PITCH_SPEED * delta * 0.5;
             }
         }
     }
     
-    // Apply rotations to the ship
     player.rotation.y += targetYawChange;
-    
-    // Apply pitch without limiting it, allowing for full 360° loops
     player.rotation.x += targetPitchChange;
-    
-    // Apply roll without limiting it, allowing for full 360° rolls
     player.rotation.z += targetRollChange;
     
-    // Update camera position
     updateCameraPosition();
 }
 
