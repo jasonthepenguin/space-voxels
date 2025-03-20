@@ -58,9 +58,7 @@ import {
     loadStarsTexture,
     createSkybox,
     setupLighting,
-    createUI,
-    setupControls,
-    handlePointerLockChange
+    createUI
 } from './environment.js';
 
 // Import textures and sounds using ES modules
@@ -135,7 +133,8 @@ import {
     isKeyPressed, 
     isLeftMouseHeld, 
     isRightMouseHeld,
-    getMouseMovement
+    getMouseMovement,
+    registerPointerLockCallback
 } from './desktopControls.js';
 
 window.respawnPlanets = function() {
@@ -276,15 +275,18 @@ function init() {
     // Setup event listeners
     setupEventListeners();
     
-    // Setup controls
-    setupControls();
-    
     // Connect to multiplayer server
     const networkingData = initNetworking(updatePlayerCount);
     socket = networkingData.socket;
     playerId = networkingData.playerId;
     isConnected = networkingData.isConnected;
 
+    // Register pointer lock callback if needed
+    registerPointerLockCallback((isLocked) => {
+        cursorLocked = isLocked;
+        // Any other code you want to run when pointer lock state changes
+    });
+    
     // Start animation loop
     animate();
     
@@ -317,7 +319,6 @@ function setupEventListeners() {
         initMobileControls();
     } else {
         initDesktopControls();
-        setupControls(); // pointer lock setup from environment.js
     }
     
     // Window resize event

@@ -88,31 +88,4 @@ export function createUI() {
     }
     
     return crosshairElement;
-}
-
-// Setup pointer lock controls
-export function setupControls() {
-    // Check if device is mobile
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                    (window.innerWidth <= 800 && window.innerHeight <= 900);
-    
-    // Only add pointer lock event listeners on desktop
-    if (!isMobile) {
-        document.addEventListener('pointerlockchange', handlePointerLockChange);
-        document.addEventListener('mozpointerlockchange', handlePointerLockChange);
-        document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
-    }
-}
-
-// Handle pointer lock change events
-export function handlePointerLockChange(cursorLockedCallback) {
-    const isLocked = document.pointerLockElement === document.body || 
-                    document.mozPointerLockElement === document.body ||
-                    document.webkitPointerLockElement === document.body;
-    
-    if (cursorLockedCallback) {
-        cursorLockedCallback(isLocked);
-    }
-    
-    return isLocked;
 } 
