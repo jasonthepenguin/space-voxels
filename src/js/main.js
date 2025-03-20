@@ -163,20 +163,6 @@ window.addOrUpdateRemotePlayer = function(id, data) {
             data.rotation.z
         );
 
-        // Add a visible collision box for debugging hit detection
-        /*
-        const boxGeometry = new THREE.BoxGeometry(4, 2, 6);
-        const boxMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff0000, 
-            wireframe: true,
-            opacity: 0.3,
-            transparent: true
-        });
-        const collisionBox = new THREE.Mesh(boxGeometry, boxMaterial);
-        remotePlayer.add(collisionBox);
-        remotePlayer.userData.collisionBox = collisionBox;
-        */
-
         console.log(`Created remote player: ${id}`);
     } else {
         // Update target positions/rotations for interpolation
@@ -278,31 +264,7 @@ function init() {
     createMoon(planets);
 
     // Initialize mobile controls
-    mobileControls = initMobileControls(
-        () => {
-            if (uiManager.isPlaying() && player) {
-                const currentTime = performance.now();
-                if (currentTime - lastShotTime >= FIRE_COOLDOWN) {
-                    shootLaser(
-                        scene, 
-                        player, 
-                        raycaster, 
-                        laserPool, 
-                        lasers, 
-                        flashPool, 
-                        soundPool, 
-                        soundsLoaded, 
-                        orbitLines, 
-                        sun, 
-                        planets, 
-                        socket, 
-                        remotePlayers
-                    );
-                    lastShotTime = currentTime;
-                }
-            }
-        }
-    );
+    mobileControls = initMobileControls();
     
     isMobile = mobileControls ? mobileControls.isMobile : false;
 
