@@ -419,7 +419,7 @@ function animate() {
         // Handle speed lines for boost effect
         if (player.userData.boostActive) {
             if (currentTime - lastSpeedLineTime > SPEED_LINE_INTERVAL) {
-                createSpeedLine();
+                uiManager.createSpeedLine();
                 lastSpeedLineTime = currentTime;
             }
         }
@@ -560,7 +560,7 @@ window.addEventListener('load', function() {
     init();
 });
 
-// New function to handle FOV transitions
+// Update the updateFOV function to use uiManager.createBoostOverlay
 function updateFOV(delta, boostActive) {
     if (!camera) return;
     
@@ -579,59 +579,12 @@ function updateFOV(delta, boostActive) {
     // Add motion blur effect when boosting
     if (boostActive) {
         if (!window.boostOverlay) {
-            createBoostOverlay();
+            uiManager.createBoostOverlay();
         }
         window.boostOverlay.style.opacity = '0.4'; // Show the overlay
     } else if (window.boostOverlay) {
         window.boostOverlay.style.opacity = '0'; // Hide the overlay
     }
-}
-
-// Create a boost overlay element for motion blur effect
-function createBoostOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'boost-overlay';
-    overlay.style.position = 'absolute';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.background = 'radial-gradient(circle, transparent 60%, rgba(255,255,255,0.3) 100%)';
-    overlay.style.pointerEvents = 'none';
-    overlay.style.zIndex = '90';
-    overlay.style.opacity = '0';
-    overlay.style.transition = 'opacity 0.3s ease';
-    document.body.appendChild(overlay);
-    window.boostOverlay = overlay;
-}
-
-// Add this function to create speed lines
-function createSpeedLine() {
-    const line = document.createElement('div');
-    line.className = 'speed-line';
-    
-    // Random position and size
-    const y = Math.random() * window.innerHeight;
-    const width = 20 + Math.random() * 100;
-    const height = 1 + Math.random() * 2;
-    
-    line.style.top = `${y}px`;
-    line.style.width = `${width}px`;
-    line.style.height = `${height}px`;
-    line.style.left = `${Math.random() * 20}%`;
-    
-    // Random rotation for more dynamic effect
-    const angle = -10 + Math.random() * 20;
-    line.style.transform = `rotate(${angle}deg)`;
-    
-    document.body.appendChild(line);
-    
-    // Remove the line after animation completes
-    setTimeout(() => {
-        if (line.parentNode) {
-            line.parentNode.removeChild(line);
-        }
-    }, 500);
 }
 
 // Improved respawn function for remote players
