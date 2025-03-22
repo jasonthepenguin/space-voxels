@@ -63,6 +63,12 @@ import {
     createUI
 } from './environment.js';
 
+import {
+    addOrUpdateRemotePlayer,
+    removeRemotePlayer,
+    getAllRemotePlayers
+} from './remotePlayers.js';
+
 // Import textures and sounds using ES modules
 import skyboxRightUrl from '../assets/textures/skybox_right.png';
 import skyboxLeftUrl from '../assets/textures/skybox_left.png';
@@ -117,7 +123,7 @@ const textureLoader = new THREE.TextureLoader();
 const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 // Keyboard state
-const remotePlayers = {};
+//const remotePlayers = {};
 
 // FOV constants
 const DEFAULT_FOV = 75;
@@ -144,55 +150,7 @@ window.respawnPlanets = function() {
     console.log('Planets respawned locally.');
 };
 
-window.addOrUpdateRemotePlayer = function(id, data) {
-    if (!remotePlayers[id]) {
-        // For remote players, we'll use the default ship type for now
-        // In a future update, we could sync ship types between players
-        const remotePlayer = createPlayer(scene, data.shipType || 'default');
-        remotePlayer.name = `remotePlayer_${id}`;
-        scene.add(remotePlayer);
-        remotePlayers[id] = remotePlayer;
 
-        // Immediately set initial position and rotation
-        remotePlayer.position.set(data.position.x, data.position.y, data.position.z);
-        remotePlayer.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
-
-        // Store target position/rotation for interpolation
-        remotePlayer.userData.targetPosition = new THREE.Vector3(
-            data.position.x,
-            data.position.y,
-            data.position.z
-        );
-        remotePlayer.userData.targetRotation = new THREE.Euler(
-            data.rotation.x,
-            data.rotation.y,
-            data.rotation.z
-        );
-
-        console.log(`Created remote player: ${id}`);
-    } else {
-        // Update target positions/rotations for interpolation
-        remotePlayers[id].userData.targetPosition.set(
-            data.position.x,
-            data.position.y,
-            data.position.z
-        );
-        remotePlayers[id].userData.targetRotation.set(
-            data.rotation.x,
-            data.rotation.y,
-            data.rotation.z
-        );
-    }
-};
-
-window.removeRemotePlayer = function(id) {
-    const player = remotePlayers[id];
-    if (player) {
-        scene.remove(player);
-        delete remotePlayers[id];
-        console.log(`Removed remote player: ${id}`);
-    }
-};
 
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
@@ -278,7 +236,7 @@ function init() {
     setupEventListeners();
     
     // Connect to multiplayer server
-    const networkingData = initNetworking(updatePlayerCount);
+    const networkingData = initNetworking(updatePlayerCount, scene);
     socket = networkingData.socket;
     playerId = networkingData.playerId;
     isConnected = networkingData.isConnected;
@@ -339,6 +297,8 @@ function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     const currentTime = performance.now();
+
+    const remotePlayers = getAllRemotePlayers();
 
     if (uiManager.isPlaying() && player) {
         // Handle desktop look controls
@@ -496,7 +456,7 @@ function handleAutoFire(currentTime) {
             sun, 
             planets, 
             socket, 
-            remotePlayers
+            getAllRemotePlayers()
         );
         lastShotTime = currentTime;
     }
@@ -595,6 +555,7 @@ function updateFOV(delta, boostActive) {
 
 // Add this function for testing
 window.testHitPlayer = function(playerId) {
+    const remotePlayers = getAllRemotePlayers();
     if (socket && remotePlayers[playerId]) {
         console.log(`Manually testing hit on player: ${playerId}`);
         socket.emit('playerHit', { 
@@ -615,6 +576,7 @@ window.respawnRemotePlayer = function(playerId, position) {
 
     console.log(`Attempting to respawn player: ${playerId}`);
 
+    const remotePlayers = getAllRemotePlayers();
     if (!remotePlayers[playerId]) {
         console.error('Remote player ${playerId} not found in remotePlayers object');
         return;

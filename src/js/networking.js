@@ -1,10 +1,22 @@
 import { io } from 'socket.io-client';
 
+import {
+    addOrUpdateRemotePlayer,
+    removeRemotePlayer
+
+} from './remotePlayers.js';
+
+
+let scene; // scene reference
+
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
 
 export let serverTimeOffset = 0;
 
-export function initNetworking(updatePlayerCount) {
+export function initNetworking(updatePlayerCount, gameScene) {
+
+    scene = gameScene; // Store the scene reference
+
     const socket = io(SOCKET_SERVER_URL, {
         transports: ['websocket'],
         reconnectionAttempts: 5,
@@ -22,7 +34,7 @@ export function initNetworking(updatePlayerCount) {
     socket.on('roomState', (state) => {
         for (const id in state.players) {
             if (id !== socket.id) {
-                window.addOrUpdateRemotePlayer(id, {
+                addOrUpdateRemotePlayer(scene, id, {
                     ...state.players[id],
                     shipType: state.players[id].shipType || 'default'
                 });
@@ -31,15 +43,15 @@ export function initNetworking(updatePlayerCount) {
     });
     
     socket.on('playerJoined', (data) => {
-        window.addOrUpdateRemotePlayer(data.id, data);
+        addOrUpdateRemotePlayer(scene, data.id, data);
     });
     
     socket.on('playerMoved', (data) => {
-        window.addOrUpdateRemotePlayer(data.id, data);
+        addOrUpdateRemotePlayer(scene, data.id, data);
     });
     
     socket.on('playerLeft', (data) => {
-        window.removeRemotePlayer(data.id);
+        removeRemotePlayer(scene, data.id);
     });
 
     socket.on('serverTime', (data) => {
