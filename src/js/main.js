@@ -34,7 +34,8 @@ import {
 import {
     createPlayer,
     handleMovement,
-    updateCameraPosition as updatePlayerCamera
+    updateCameraPosition as updatePlayerCamera,
+    respawnLocalPlayer
 } from './player.js';
 
 import {
@@ -691,77 +692,9 @@ window.testHitPlayer = function(playerId) {
     return false;
 };
 
-// Add this function to respawn the local player
-function respawnLocalPlayer() {
-    console.log("Respawning local player...");
-    
-    if (!player) {
-        console.error("Cannot respawn: player does not exist");
-        return;
-    }
-    
-    // Generate a random respawn position
-    const respawnPosition = {
-        x: Math.random() * 100 - 50,
-        y: Math.random() * 50 + 10,
-        z: Math.random() * 100 - 50
-    };
-    
-    // Create a respawn explosion effect
-    const explosionGeometry = new THREE.SphereGeometry(2, 16, 16);
-    const explosionMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffff00,
-        transparent: true,
-        opacity: 0.8
-    });
-    
-    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
-    explosion.position.copy(player.position);
-    scene.add(explosion);
-    
-    // Animate explosion
-    let explosionScale = 1;
-    const expandExplosion = () => {
-        explosionScale += 0.2;
-        explosion.scale.set(explosionScale, explosionScale, explosionScale);
-        explosion.material.opacity -= 0.05;
-        
-        if (explosion.material.opacity > 0) {
-            requestAnimationFrame(expandExplosion);
-        } else {
-            scene.remove(explosion);
-        }
-    };
-    
-    expandExplosion();
-    
-    // Teleport player to new position
-    player.position.set(respawnPosition.x, respawnPosition.y, respawnPosition.z);
-    
-    // Reset rotation
-    player.rotation.set(0, 0, 0);
-    
-    // Update camera position immediately
-    updateCameraPosition();
-    
-    // Notify server of new position
-    if (socket && isConnected) {
-        socket.emit('updatePosition', {
-            position: {
-                x: player.position.x,
-                y: player.position.y,
-                z: player.position.z
-            },
-            rotation: {
-                x: player.rotation.x,
-                y: player.rotation.y,
-                z: player.rotation.z
-            }
-        });
-    }
-    
-    console.log("Local player respawned at", respawnPosition);
-}
+
 
 // Expose the function to the window object for networking
-window.respawnLocalPlayer = respawnLocalPlayer;
+window.respawnLocalPlayer = function() {
+    respawnLocalPlayer(player, scene, updateCameraPosition, socket, isConnected);
+};
