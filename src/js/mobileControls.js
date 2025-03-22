@@ -37,7 +37,7 @@ export function isBoostActive() {
 }
 
 // Initialize mobile controls
-export function initMobileControls(shootCallback, respawnCallback) {
+export function initMobileControls() {
     // Check if device is mobile
     isMobile = detectMobile();
     
@@ -60,7 +60,7 @@ export function initMobileControls(shootCallback, respawnCallback) {
     mobileControls.appendChild(boostButton);
     
     // Setup event listeners for mobile controls
-    setupMobileEventListeners(shootCallback);
+    setupMobileEventListeners();
     
     return { isMobile };
 }
@@ -72,7 +72,7 @@ function detectMobile() {
 }
 
 // Setup mobile event listeners
-function setupMobileEventListeners(shootCallback) {
+function setupMobileEventListeners() {
     // Move joystick events
     joystickArea.addEventListener('touchstart', handleMoveJoystickStart, { passive: false });
     joystickArea.addEventListener('touchmove', handleMoveJoystickMove, { passive: false });

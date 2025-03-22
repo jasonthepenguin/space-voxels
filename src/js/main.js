@@ -34,7 +34,9 @@ import {
 import {
     createPlayer,
     handleMovement,
-    updateCameraPosition as updatePlayerCamera
+    updateCameraPosition as updatePlayerCamera,
+    respawnLocalPlayer,
+    respawnRemotePlayer
 } from './player.js';
 
 import {
@@ -58,10 +60,14 @@ import {
     loadStarsTexture,
     createSkybox,
     setupLighting,
-    createUI,
-    setupControls,
-    handlePointerLockChange
+    createUI
 } from './environment.js';
+
+import {
+    addOrUpdateRemotePlayer,
+    removeRemotePlayer,
+    getAllRemotePlayers
+} from './remotePlayers.js';
 
 // Import textures and sounds using ES modules
 import skyboxRightUrl from '../assets/textures/skybox_right.png';
@@ -86,8 +92,6 @@ let player = null; // Player object - initialized as null
 let cameraOffset = new THREE.Vector3(0, 10, 20); // Much higher and further back
 let crosshair;
 let raycaster;
-let mouse = new THREE.Vector2();
-let leftMouseHeld = false;
 let cursorLocked = false;
 
 
@@ -119,9 +123,7 @@ const textureLoader = new THREE.TextureLoader();
 const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 // Keyboard state
-const keyboard = {};
-
-const remotePlayers = {};
+//const remotePlayers = {};
 
 // FOV constants
 const DEFAULT_FOV = 75;
@@ -133,74 +135,22 @@ let speedLines = [];
 let lastSpeedLineTime = 0;
 const SPEED_LINE_INTERVAL = 100; // ms between new speed lines
 
+// Import desktop controls properly and use its exported functions
+import { 
+    initDesktopControls, 
+    isKeyPressed, 
+    isLeftMouseHeld, 
+    isRightMouseHeld,
+    getMouseMovement,
+    registerPointerLockCallback
+} from './desktopControls.js';
+
 window.respawnPlanets = function() {
     respawnAllCelestialBodies(sun, planets);
     console.log('Planets respawned locally.');
 };
 
-window.addOrUpdateRemotePlayer = function(id, data) {
-    if (!remotePlayers[id]) {
-        // For remote players, we'll use the default ship type for now
-        // In a future update, we could sync ship types between players
-        const remotePlayer = createPlayer(scene, data.shipType || 'default');
-        remotePlayer.name = `remotePlayer_${id}`;
-        scene.add(remotePlayer);
-        remotePlayers[id] = remotePlayer;
 
-        // Immediately set initial position and rotation
-        remotePlayer.position.set(data.position.x, data.position.y, data.position.z);
-        remotePlayer.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
-
-        // Store target position/rotation for interpolation
-        remotePlayer.userData.targetPosition = new THREE.Vector3(
-            data.position.x,
-            data.position.y,
-            data.position.z
-        );
-        remotePlayer.userData.targetRotation = new THREE.Euler(
-            data.rotation.x,
-            data.rotation.y,
-            data.rotation.z
-        );
-
-        // Add a visible collision box for debugging hit detection
-        /*
-        const boxGeometry = new THREE.BoxGeometry(4, 2, 6);
-        const boxMaterial = new THREE.MeshBasicMaterial({ 
-            color: 0xff0000, 
-            wireframe: true,
-            opacity: 0.3,
-            transparent: true
-        });
-        const collisionBox = new THREE.Mesh(boxGeometry, boxMaterial);
-        remotePlayer.add(collisionBox);
-        remotePlayer.userData.collisionBox = collisionBox;
-        */
-
-        console.log(`Created remote player: ${id}`);
-    } else {
-        // Update target positions/rotations for interpolation
-        remotePlayers[id].userData.targetPosition.set(
-            data.position.x,
-            data.position.y,
-            data.position.z
-        );
-        remotePlayers[id].userData.targetRotation.set(
-            data.rotation.x,
-            data.rotation.y,
-            data.rotation.z
-        );
-    }
-};
-
-window.removeRemotePlayer = function(id) {
-    const player = remotePlayers[id];
-    if (player) {
-        scene.remove(player);
-        delete remotePlayers[id];
-        console.log(`Removed remote player: ${id}`);
-    }
-};
 
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
@@ -278,46 +228,25 @@ function init() {
     createMoon(planets);
 
     // Initialize mobile controls
-    mobileControls = initMobileControls(
-        () => {
-            if (uiManager.isPlaying() && player) {
-                const currentTime = performance.now();
-                if (currentTime - lastShotTime >= FIRE_COOLDOWN) {
-                    shootLaser(
-                        scene, 
-                        player, 
-                        raycaster, 
-                        laserPool, 
-                        lasers, 
-                        flashPool, 
-                        soundPool, 
-                        soundsLoaded, 
-                        orbitLines, 
-                        sun, 
-                        planets, 
-                        socket, 
-                        remotePlayers
-                    );
-                    lastShotTime = currentTime;
-                }
-            }
-        }
-    );
+    mobileControls = initMobileControls();
     
     isMobile = mobileControls ? mobileControls.isMobile : false;
 
     // Setup event listeners
     setupEventListeners();
     
-    // Setup controls
-    setupControls();
-    
     // Connect to multiplayer server
-    const networkingData = initNetworking(updatePlayerCount);
+    const networkingData = initNetworking(updatePlayerCount, scene);
     socket = networkingData.socket;
     playerId = networkingData.playerId;
     isConnected = networkingData.isConnected;
 
+    // Register pointer lock callback if needed
+    registerPointerLockCallback((isLocked) => {
+        cursorLocked = isLocked;
+        // Any other code you want to run when pointer lock state changes
+    });
+    
     // Start animation loop
     animate();
     
@@ -343,69 +272,13 @@ function updatePlayerCount(count) {
     updatePlayerCountUI(count);
 }
 
-function setupEventListeners() {
-    // Keyboard event listeners
-    document.addEventListener('keydown', (event) => {
-        keyboard[event.code] = true;
-        
-        // Prevent default behavior for Escape key when game is started
-        if (event.code === 'Escape' && gameStarted) {
-            event.preventDefault();
-            // We'll let the pointer lock handler deal with re-locking
-        }
-    });
-    
-    document.addEventListener('keyup', (event) => {
-        keyboard[event.code] = false;
-    });
-    
-    // Mouse event listeners (only for desktop)
-    if (!isMobile) {
-        
-        document.addEventListener('mousedown', (event) => {
-            if (event.button === 0) leftMouseHeld = true;
-        });
-        
-        document.addEventListener('mouseup', (event) => {
-            if (event.button === 0) leftMouseHeld = false;
-        });
-        
-        // Mouse movement for camera rotation only (not ship rotation)
-        document.addEventListener('mousemove', (event) => {
-            if (uiManager.isPlaying() && player) { // Only rotate camera if game started and player exists
-                // For pointer lock, use movementX/Y
-                // For non-pointer lock, we'll need to calculate movement differently
-                let moveX, moveY;
-                
-                if (document.pointerLockElement === document.body) {
-                    moveX = event.movementX;
-                    moveY = event.movementY;
-                } else {
-                    // When not in pointer lock, we can still allow camera movement
-                    // but it will be less smooth without movementX/Y
-                    moveX = event.movementX || (event.clientX - window.innerWidth/2) * 0.1;
-                    moveY = event.movementY || (event.clientY - window.innerHeight/2) * 0.1;
-                }
-                
-                const cameraYaw = -moveX * 0.002;
-                const cameraPitch = -moveY * 0.002;
-                
-                // Apply to camera offset angles (stored as properties on the offset vector)
-                if (!cameraOffset.angles) {
-                    cameraOffset.angles = { yaw: 0, pitch: 0 };
-                }
-                
-                cameraOffset.angles.yaw += cameraYaw;
-                
-                // Limit vertical rotation to prevent flipping
-                cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
-                                            Math.min(Math.PI/2, 
-                                            cameraOffset.angles.pitch + cameraPitch));
-                
-                // Update camera position
-                updateCameraPosition();
-            }
-        });
+function setupEventListeners() {            
+    const isMobile = checkIsMobile();
+
+    if (isMobile) {
+        initMobileControls();
+    } else {
+        initDesktopControls();
     }
     
     // Window resize event
@@ -425,7 +298,29 @@ function animate() {
     const delta = clock.getDelta();
     const currentTime = performance.now();
 
+    const remotePlayers = getAllRemotePlayers();
+
     if (uiManager.isPlaying() && player) {
+        // Handle desktop look controls
+        if (!isMobile) {
+            const lookDelta = getMouseMovement();
+            
+            if (lookDelta.x !== 0 || lookDelta.y !== 0) {
+                // Initialize camera offset angles if needed
+                if (!cameraOffset.angles) {
+                    cameraOffset.angles = { yaw: 0, pitch: 0 };
+                }
+                
+                // Apply look delta to camera angles
+                cameraOffset.angles.yaw -= lookDelta.x * 0.002;
+                
+                // Limit vertical rotation to prevent flipping
+                cameraOffset.angles.pitch = Math.max(-Math.PI/2, 
+                                            Math.min(Math.PI/2, 
+                                            cameraOffset.angles.pitch - lookDelta.y * 0.002));
+            }
+        }
+        
         // Handle mobile look controls
         if (isMobile) {
             const lookDelta = getLookDelta();
@@ -450,11 +345,13 @@ function animate() {
         }
         
         // Handle player movement with mobile controls if on mobile
-        handleMovement(player, keyboard, delta, updateCameraPosition, isMobile ? {
+        handleMovement(player, delta, updateCameraPosition, isMobile ? {
             isMobile: true,
             getJoystickValues: getJoystickValues,
             isBoostActive: isBoostActive
-        } : null);
+        } : {
+            isKeyPressed: isKeyPressed
+        });
 
         // Auto fire handler
         handleAutoFire(currentTime);
@@ -484,7 +381,7 @@ function animate() {
         // Handle speed lines for boost effect
         if (player.userData.boostActive) {
             if (currentTime - lastSpeedLineTime > SPEED_LINE_INTERVAL) {
-                createSpeedLine();
+                uiManager.createSpeedLine();
                 lastSpeedLineTime = currentTime;
             }
         }
@@ -541,11 +438,11 @@ function updateCameraPosition() {
     }
 }
 
-// Handle auto fire for mobile and desktop
+// Update this function to use the correct left mouse held status from desktop controls
 function handleAutoFire(currentTime) {
     if (!player || !uiManager.isPlaying()) return;
 
-    if ((leftMouseHeld || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
+    if ((isLeftMouseHeld() || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
         shootLaser(
             scene, 
             player, 
@@ -559,7 +456,7 @@ function handleAutoFire(currentTime) {
             sun, 
             planets, 
             socket, 
-            remotePlayers
+            getAllRemotePlayers()
         );
         lastShotTime = currentTime;
     }
@@ -625,7 +522,7 @@ window.addEventListener('load', function() {
     init();
 });
 
-// New function to handle FOV transitions
+// Update the updateFOV function to use uiManager.createBoostOverlay
 function updateFOV(delta, boostActive) {
     if (!camera) return;
     
@@ -644,7 +541,7 @@ function updateFOV(delta, boostActive) {
     // Add motion blur effect when boosting
     if (boostActive) {
         if (!window.boostOverlay) {
-            createBoostOverlay();
+            uiManager.createBoostOverlay();
         }
         window.boostOverlay.style.opacity = '0.4'; // Show the overlay
     } else if (window.boostOverlay) {
@@ -652,142 +549,13 @@ function updateFOV(delta, boostActive) {
     }
 }
 
-// Create a boost overlay element for motion blur effect
-function createBoostOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'boost-overlay';
-    overlay.style.position = 'absolute';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.background = 'radial-gradient(circle, transparent 60%, rgba(255,255,255,0.3) 100%)';
-    overlay.style.pointerEvents = 'none';
-    overlay.style.zIndex = '90';
-    overlay.style.opacity = '0';
-    overlay.style.transition = 'opacity 0.3s ease';
-    document.body.appendChild(overlay);
-    window.boostOverlay = overlay;
-}
 
-// Add this function to create speed lines
-function createSpeedLine() {
-    const line = document.createElement('div');
-    line.className = 'speed-line';
-    
-    // Random position and size
-    const y = Math.random() * window.innerHeight;
-    const width = 20 + Math.random() * 100;
-    const height = 1 + Math.random() * 2;
-    
-    line.style.top = `${y}px`;
-    line.style.width = `${width}px`;
-    line.style.height = `${height}px`;
-    line.style.left = `${Math.random() * 20}%`;
-    
-    // Random rotation for more dynamic effect
-    const angle = -10 + Math.random() * 20;
-    line.style.transform = `rotate(${angle}deg)`;
-    
-    document.body.appendChild(line);
-    
-    // Remove the line after animation completes
-    setTimeout(() => {
-        if (line.parentNode) {
-            line.parentNode.removeChild(line);
-        }
-    }, 500);
-}
 
-// Improved respawn function for remote players
-function respawnRemotePlayer(playerId, position) {
-    console.log(`Attempting to respawn player: ${playerId}`);
-    
-    if (!remotePlayers[playerId]) {
-        console.error(`Remote player ${playerId} not found in remotePlayers object`);
-        return;
-    }
-    
-    const remotePlayer = remotePlayers[playerId];
-    console.log(`Remote player found, current position:`, remotePlayer.position);
-    
-    // Create a respawn explosion effect at current position
-    const explosionGeometry = new THREE.SphereGeometry(2, 16, 16);
-    const explosionMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffff00,
-        transparent: true,
-        opacity: 0.8
-    });
-    
-    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
-    explosion.position.copy(remotePlayer.position);
-    scene.add(explosion);
-    
-    // Animate explosion
-    let explosionScale = 1;
-    const expandExplosion = () => {
-        explosionScale += 0.2;
-        explosion.scale.set(explosionScale, explosionScale, explosionScale);
-        explosion.material.opacity -= 0.05;
-        
-        if (explosion.material.opacity > 0) {
-            requestAnimationFrame(expandExplosion);
-        } else {
-            scene.remove(explosion);
-        }
-    };
-    
-    expandExplosion();
-    
-    // Log before teleport
-    console.log(`Teleporting player from`, remotePlayer.position, `to`, position);
-    
-    // Teleport immediately
-    remotePlayer.position.set(position.x, position.y, position.z);
-    
-    // Reset rotation
-    remotePlayer.rotation.set(0, 0, 0);
-    
-    // Update target position for interpolation
-    remotePlayer.userData.targetPosition = new THREE.Vector3(position.x, position.y, position.z);
-    remotePlayer.userData.targetRotation = new THREE.Euler(0, 0, 0);
-    
-    // Create a respawn effect at new position
-    const respawnMarker = new THREE.Mesh(
-        new THREE.SphereGeometry(3, 8, 8),
-        new THREE.MeshBasicMaterial({ 
-            color: 0x00ff00, 
-            wireframe: true,
-            transparent: true,
-            opacity: 0.7
-        })
-    );
-    respawnMarker.position.copy(position);
-    scene.add(respawnMarker);
-    
-    // Animate the respawn marker
-    let markerScale = 1;
-    const shrinkMarker = () => {
-        markerScale -= 0.05;
-        respawnMarker.scale.set(markerScale, markerScale, markerScale);
-        
-        if (markerScale > 0) {
-            requestAnimationFrame(shrinkMarker);
-        } else {
-            scene.remove(respawnMarker);
-        }
-    };
-    
-    shrinkMarker();
-    
-    console.log(`Teleport complete, new position:`, remotePlayer.position);
-}
 
-// Expose the function to the window object for networking
-window.respawnRemotePlayer = respawnRemotePlayer;
 
 // Add this function for testing
 window.testHitPlayer = function(playerId) {
+    const remotePlayers = getAllRemotePlayers();
     if (socket && remotePlayers[playerId]) {
         console.log(`Manually testing hit on player: ${playerId}`);
         socket.emit('playerHit', { 
@@ -803,77 +571,22 @@ window.testHitPlayer = function(playerId) {
     return false;
 };
 
-// Add this function to respawn the local player
-function respawnLocalPlayer() {
-    console.log("Respawning local player...");
-    
-    if (!player) {
-        console.error("Cannot respawn: player does not exist");
+
+window.respawnRemotePlayer = function(playerId, position) {
+
+    console.log(`Attempting to respawn player: ${playerId}`);
+
+    const remotePlayers = getAllRemotePlayers();
+    if (!remotePlayers[playerId]) {
+        console.error('Remote player ${playerId} not found in remotePlayers object');
         return;
     }
-    
-    // Generate a random respawn position
-    const respawnPosition = {
-        x: Math.random() * 100 - 50,
-        y: Math.random() * 50 + 10,
-        z: Math.random() * 100 - 50
-    };
-    
-    // Create a respawn explosion effect
-    const explosionGeometry = new THREE.SphereGeometry(2, 16, 16);
-    const explosionMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffff00,
-        transparent: true,
-        opacity: 0.8
-    });
-    
-    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
-    explosion.position.copy(player.position);
-    scene.add(explosion);
-    
-    // Animate explosion
-    let explosionScale = 1;
-    const expandExplosion = () => {
-        explosionScale += 0.2;
-        explosion.scale.set(explosionScale, explosionScale, explosionScale);
-        explosion.material.opacity -= 0.05;
-        
-        if (explosion.material.opacity > 0) {
-            requestAnimationFrame(expandExplosion);
-        } else {
-            scene.remove(explosion);
-        }
-    };
-    
-    expandExplosion();
-    
-    // Teleport player to new position
-    player.position.set(respawnPosition.x, respawnPosition.y, respawnPosition.z);
-    
-    // Reset rotation
-    player.rotation.set(0, 0, 0);
-    
-    // Update camera position immediately
-    updateCameraPosition();
-    
-    // Notify server of new position
-    if (socket && isConnected) {
-        socket.emit('updatePosition', {
-            position: {
-                x: player.position.x,
-                y: player.position.y,
-                z: player.position.z
-            },
-            rotation: {
-                x: player.rotation.x,
-                y: player.rotation.y,
-                z: player.rotation.z
-            }
-        });
-    }
-    
-    console.log("Local player respawned at", respawnPosition);
-}
+
+    const remotePlayer = remotePlayers[playerId];
+    respawnRemotePlayer(remotePlayer, position, scene);
+};
 
 // Expose the function to the window object for networking
-window.respawnLocalPlayer = respawnLocalPlayer;
+window.respawnLocalPlayer = function() {
+    respawnLocalPlayer(player, scene, updateCameraPosition, socket, isConnected);
+};
