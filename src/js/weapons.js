@@ -25,11 +25,11 @@ export function initWeapons(scene) {
 
 // Get a laser from the pool
 export function getLaserFromPool(scene, laserPool, lasers) {
-    // Try to reuse an inactive laser
-    for (const laser of laserPool) {
-        if (!laser.visible) {
-            laser.visible = true;
-            return laser;
+    // Try to reuse an inactive laser first (most efficient)
+    for (let i = 0; i < laserPool.length; i++) {
+        if (!laserPool[i].visible) {
+            laserPool[i].visible = true;
+            return laserPool[i];
         }
     }
     
@@ -39,25 +39,22 @@ export function getLaserFromPool(scene, laserPool, lasers) {
         const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
         const newLaser = new THREE.Mesh(laserGeometry, laserMaterial);
         newLaser.visible = true;
-        newLaser.name = "Laser_" + laserPool.length; // Give each laser a unique name
+        newLaser.name = "Laser_" + laserPool.length;
         scene.add(newLaser);
         laserPool.push(newLaser);
         return newLaser;
     }
     
-    // Recycle oldest inactive laser safely
-    for (let i = 0; i < lasers.length; i++) {
-        if (!lasers[i].visible) {
-            const reusableLaser = lasers.splice(i, 1)[0];
-            reusableLaser.visible = true;
-            return reusableLaser;
-        }
-    }
-
-    // If all lasers are active, recycle the oldest laser
+    // If all lasers are active, recycle the oldest one
+    // This is faster than searching through all lasers again
     const oldestLaser = lasers.shift();
-    oldestLaser.visible = true;
-    return oldestLaser;
+    if (oldestLaser) {
+        oldestLaser.visible = true;
+        return oldestLaser;
+    }
+    
+    // Fallback - should rarely happen
+    return laserPool[0];
 }
 
 // Get a flash effect from the pool
@@ -116,9 +113,6 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     // Get start position for the laser
     const startPos = rayOrigin.clone();
     
-    // Check for intersections
-    const intersects = raycaster.intersectObjects(scene.children, true);
-    
     // Create a list of objects to ignore (player and its children, lasers, orbit lines, flashes)
     const ignoreList = [player, ...player.children];
     
@@ -138,26 +132,42 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     orbitLines.forEach(line => {
         ignoreList.push(line);
     });
+
+    // OPTIMIZATION: Pre-filter scene objects to reduce raycast workload
+    // Only include objects that we actually want to test against
+    const objectsToTest = [];
+    
+    // Include sun and planets explicitly (they're what we want to hit)
+    if (sun) objectsToTest.push(sun);
+    if (planets && planets.length) {
+        planets.forEach(planet => {
+            objectsToTest.push(planet);
+            // Include moon if the planet has one
+            if (planet.moon) objectsToTest.push(planet.moon);
+        });
+    }
+    
+    // Add remote players
+    if (remotePlayersRef) {
+        Object.values(remotePlayersRef).forEach(player => {
+            objectsToTest.push(player);
+            // Include player's children
+            player.children.forEach(child => objectsToTest.push(child));
+        });
+    }
+    
+    // ONLY raycast against objects we care about
+    const intersects = raycaster.intersectObjects(objectsToTest, true);
     
     let targetPoint, targetObject, targetParent, instanceId;
     let hitRemotePlayer = null;
     
     if (intersects.length > 0) {
-        // Filter out objects to ignore and anything too close to the player
+        // Only check distance from player to avoid too-close hits
         const filteredIntersects = intersects.filter(intersect => {
-            // Check if the object is in the ignore list or its parent is
-            const isIgnored = ignoreList.includes(intersect.object) || 
-                             ignoreList.includes(intersect.object.parent);
-            
-            // Check if the object name contains "OrbitLine" (as a fallback)
-            const isOrbitLine = intersect.object.name && intersect.object.name.includes("OrbitLine");
-            
             // Check if the intersection point is too close to the player
             const distanceFromPlayer = player.position.distanceTo(intersect.point);
-            const isTooClose = distanceFromPlayer < 6;
-            
-            // Only include intersections that are not ignored, not orbit lines, and not too close
-            return !isIgnored && !isOrbitLine && !isTooClose;
+            return distanceFromPlayer >= 6; // Only include if not too close
         });
         
         if (filteredIntersects.length > 0) {
@@ -165,58 +175,45 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             targetPoint = filteredIntersects[0].point;
             targetObject = filteredIntersects[0].object;
             
-            // Check if we hit a remote player
+            // Check if we hit a remote player - OPTIMIZED
             if (remotePlayersRef && Object.keys(remotePlayersRef).length > 0) {
-                console.log("Checking for remote player hits among", Object.keys(remotePlayersRef).length, "players");
+                // REMOVE CONSOLE LOGGING FOR PERFORMANCE
+                // console.log("Checking for remote player hits among", Object.keys(remotePlayersRef).length, "players");
                 
-                // Check if the hit object is part of a remote player
                 for (const playerId in remotePlayersRef) {
                     const remotePlayer = remotePlayersRef[playerId];
                     
-                    // Debug the remote player structure
-                    console.log(`Remote player ${playerId} structure:`, remotePlayer);
+                    // REMOVE DEBUG LOGGING
+                    // console.log(`Remote player ${playerId} structure:`, remotePlayer);
                     
-                    // The remote player IS the mesh in your implementation
-                    const isDirectHit = targetObject === remotePlayer;
+                    // Check if direct hit on player or any child
+                    let isHit = targetObject === remotePlayer;
                     
-                    // Check if it's a child of the remote player
-                    let isChildHit = false;
-                    if (remotePlayer.children && remotePlayer.children.length > 0) {
-                        // Recursive function to check all descendants
-                        const checkChildren = (parent) => {
-                            for (const child of parent.children) {
-                                if (child === targetObject) return true;
-                                if (child.children && child.children.length > 0) {
-                                    if (checkChildren(child)) return true;
-                                }
+                    if (!isHit && remotePlayer.children) {
+                        for (const child of remotePlayer.children) {
+                            if (targetObject === child) {
+                                isHit = true;
+                                break;
                             }
-                            return false;
-                        };
-                        
-                        isChildHit = checkChildren(remotePlayer);
+                        }
                     }
                     
-                    if (isDirectHit || isChildHit) {
+                    if (isHit) {
                         hitRemotePlayer = playerId;
-                        console.log(`Hit remote player: ${playerId}`);
+                        // REMOVE DEBUG LOGGING
+                        // console.log(`Hit remote player: ${playerId}`);
                         break;
                     }
                 }
             }
             
-            // Capture the instance ID if we hit an instanced mesh
+            // Capture instance ID for instanced meshes
             if (targetObject.isInstancedMesh) {
                 instanceId = filteredIntersects[0].instanceId;
             }
             
             // Find the parent group (sun, planet, or moon)
-            if (targetObject.isInstancedMesh) {
-                // If we hit an instanced mesh directly
-                targetParent = targetObject.parent;
-            } else {
-                // Otherwise use the parent
-                targetParent = targetObject.parent;
-            }
+            targetParent = targetObject.parent;
         } else {
             // Nothing valid hit, shoot into distance
             targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
@@ -303,7 +300,7 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         }
         
         // Create explosion
-        if (targetParent && 
+        if (targetObject && targetParent && 
             (targetParent === sun || 
              planets.includes(targetParent) || 
              planets.some(p => p.moon && targetParent === p.moon))) {
@@ -315,10 +312,8 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             const isSaturnRings = targetParent.name === 'Saturn' && 
                                  targetObject === targetParent.ringInstancedMesh;
             
-            setTimeout(() => {
-                // Pass the instanceId and a flag indicating if this is Saturn's rings
-                createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
-            }, 300);
+            // OPTIMIZATION: Create explosion immediately - no setTimeout
+            createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
         }
     }
 }
