@@ -34,10 +34,12 @@ import {
 import {
     createPlayer,
     handleMovement,
-    updateCameraPosition as updatePlayerCamera,
-    respawnLocalPlayer,
-    respawnRemotePlayer
+    updateCameraPosition as updatePlayerCamera
 } from './player.js';
+
+import {
+    respawnLocalPlayer
+} from './remotePlayers.js';
 
 import {
     MAX_LASERS,
@@ -45,15 +47,17 @@ import {
     initWeapons,
     shootLaser,
     updateLasers,
-    preloadSounds,
-    updateFlashes
+    initAudioSystem,
+    updateFlashes,
+    updateRaycastTargets
 } from './weapons.js';
 
 import {
     initNetworking,
     sendPlayerReady,
     sendPlayerNotReady,
-    updatePlayerCountUI
+    updatePlayerCountUI,
+    setPlayerReference
 } from './networking.js';
 
 import {
@@ -122,8 +126,6 @@ const textureLoader = new THREE.TextureLoader();
 // Add this shared geometry for all voxels
 const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 
-// Keyboard state
-//const remotePlayers = {};
 
 // FOV constants
 const DEFAULT_FOV = 75;
@@ -145,13 +147,6 @@ import {
     registerPointerLockCallback
 } from './desktopControls.js';
 
-window.respawnPlanets = function() {
-    respawnAllCelestialBodies(sun, planets);
-    console.log('Planets respawned locally.');
-};
-
-
-
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
     get: function() {
@@ -161,6 +156,9 @@ Object.defineProperty(window, 'gameStarted', {
 
 // Expose resetGame to window for UI access
 window.resetGame = resetGame;
+
+// Replace soundPool and soundsLoaded variables with audioSystem
+let audioSystem;
 
 // Initialize the game
 function init() {
@@ -208,7 +206,7 @@ function init() {
     // Create UI elements (crosshair)
     crosshair = createUI();
 
-    // Initialize weapon systems
+    // Initialize weapon systems with the optimized shared resources
     const weaponSystems = initWeapons(scene);
     laserPool = weaponSystems.laserPool;
     lasers = weaponSystems.lasers;
@@ -226,6 +224,9 @@ function init() {
 
     // Add Earth's moon
     createMoon(planets);
+    
+    // Update cached raycast targets
+    updateRaycastTargets(sun, planets);
 
     // Initialize mobile controls
     mobileControls = initMobileControls();
@@ -235,7 +236,7 @@ function init() {
     // Setup event listeners
     setupEventListeners();
     
-    // Connect to multiplayer server
+    // Connect to multiplayer server - updated with no player reference yet
     const networkingData = initNetworking(updatePlayerCount, scene);
     socket = networkingData.socket;
     playerId = networkingData.playerId;
@@ -250,9 +251,8 @@ function init() {
     // Start animation loop
     animate();
     
-    // Preload sounds
-    soundPool = preloadSounds(laserSoundUrl, MAX_SOUNDS);
-    soundsLoaded = true;
+    // Initialize audio system instead of preloading sounds
+    audioSystem = initAudioSystem();
     
     console.log("Game initialized successfully");
     console.log("Mobile device detected:", isMobile);
@@ -280,6 +280,11 @@ function setupEventListeners() {
     } else {
         initDesktopControls();
     }
+    
+    // Add event listeners to resume audio context on user interaction
+    ['click', 'touchstart', 'keydown'].forEach(eventType => {
+        document.addEventListener(eventType, resumeAudioContext, { once: true });
+    });
     
     // Window resize event
     window.addEventListener('resize', () => {
@@ -450,8 +455,7 @@ function handleAutoFire(currentTime) {
             laserPool, 
             lasers, 
             flashPool, 
-            soundPool, 
-            soundsLoaded, 
+            audioSystem,
             orbitLines, 
             sun, 
             planets, 
@@ -466,6 +470,14 @@ function handleAutoFire(currentTime) {
 function startGame() {
     gameStarted = true;
     
+    // Resume audio context on user interaction
+    resumeAudioContext();
+    
+    // Load sounds if not already loaded
+    if (audioSystem && !audioSystem.isAudioInitialized) {
+        audioSystem.loadSound('laser', laserSoundUrl);
+    }
+    
     // Get the selected ship type from the UI manager
     const selectedShipType = uiManager.getSelectedShip();
     console.log(`Starting game with ship: ${selectedShipType}`);
@@ -474,6 +486,9 @@ function startGame() {
     player = createPlayer(scene, selectedShipType);
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
+    
+    // Set player reference in networking module
+    setPlayerReference(player, updateCameraPosition);
     
     // Show mobile controls if on mobile
     if (isMobile) {
@@ -549,44 +564,9 @@ function updateFOV(delta, boostActive) {
     }
 }
 
-
-
-
-
-// Add this function for testing
-window.testHitPlayer = function(playerId) {
-    const remotePlayers = getAllRemotePlayers();
-    if (socket && remotePlayers[playerId]) {
-        console.log(`Manually testing hit on player: ${playerId}`);
-        socket.emit('playerHit', { 
-            targetId: playerId,
-            position: {
-                x: Math.random() * 100 - 50,
-                y: Math.random() * 50 + 10,
-                z: Math.random() * 100 - 50
-            }
-        });
-        return true;
+// Add a function to resume audio context on user interaction
+function resumeAudioContext() {
+    if (audioSystem && audioSystem.audioContext.state === 'suspended') {
+        audioSystem.audioContext.resume();
     }
-    return false;
-};
-
-
-window.respawnRemotePlayer = function(playerId, position) {
-
-    console.log(`Attempting to respawn player: ${playerId}`);
-
-    const remotePlayers = getAllRemotePlayers();
-    if (!remotePlayers[playerId]) {
-        console.error('Remote player ${playerId} not found in remotePlayers object');
-        return;
-    }
-
-    const remotePlayer = remotePlayers[playerId];
-    respawnRemotePlayer(remotePlayer, position, scene);
-};
-
-// Expose the function to the window object for networking
-window.respawnLocalPlayer = function() {
-    respawnLocalPlayer(player, scene, updateCameraPosition, socket, isConnected);
-};
+}

@@ -69,3 +69,157 @@ export function getRemotePlayer(id) {
 export function getAllRemotePlayers() {
     return remotePlayers;
 }
+
+// function to respawn the local player
+export function respawnLocalPlayer(player, scene, updateCameraPosition, socket, isConnected) {
+    console.log("Respawning local player...");
+    
+    if (!player) {
+        console.error("Cannot respawn: player does not exist");
+        return;
+    }
+    
+    // Generate a random respawn position
+    const respawnPosition = {
+        x: Math.random() * 100 - 50,
+        y: Math.random() * 50 + 10,
+        z: Math.random() * 100 - 50
+    };
+    
+    // Create a respawn explosion effect
+    const explosionGeometry = new THREE.SphereGeometry(2, 16, 16);
+    const explosionMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 0.8
+    });
+    
+    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
+    explosion.position.copy(player.position);
+    scene.add(explosion);
+    
+    // Animate explosion
+    let explosionScale = 1;
+    const expandExplosion = () => {
+        explosionScale += 0.2;
+        explosion.scale.set(explosionScale, explosionScale, explosionScale);
+        explosion.material.opacity -= 0.05;
+        
+        if (explosion.material.opacity > 0) {
+            requestAnimationFrame(expandExplosion);
+        } else {
+            scene.remove(explosion);
+        }
+    };
+    
+    expandExplosion();
+    
+    // Teleport player to new position
+    player.position.set(respawnPosition.x, respawnPosition.y, respawnPosition.z);
+    
+    // Reset rotation
+    player.rotation.set(0, 0, 0);
+    
+    // Update camera position immediately
+    updateCameraPosition();
+    
+    // Notify server of new position
+    if (socket && isConnected) {
+        socket.emit('updatePosition', {
+            position: {
+                x: player.position.x,
+                y: player.position.y,
+                z: player.position.z
+            },
+            rotation: {
+                x: player.rotation.x,
+                y: player.rotation.y,
+                z: player.rotation.z
+            }
+        });
+    }
+    
+    console.log("Local player respawned at", respawnPosition);
+}
+
+// Respawn a remote player
+export function respawnRemotePlayer(id, position, scene) {
+    const remotePlayer = remotePlayers[id];
+    if (!remotePlayer) {
+        console.error(`Remote player ${id} not found in remotePlayers object`);
+        return;
+    }
+    
+    console.log(`Remote player found, current position:`, remotePlayer.position);
+    
+    // Create a respawn explosion effect at current position
+    const explosionGeometry = new THREE.SphereGeometry(2, 16, 16);
+    const explosionMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 0.8
+    });
+    
+    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
+    explosion.position.copy(remotePlayer.position);
+    scene.add(explosion);
+    
+    // Animate explosion
+    let explosionScale = 1;
+    const expandExplosion = () => {
+        explosionScale += 0.2;
+        explosion.scale.set(explosionScale, explosionScale, explosionScale);
+        explosion.material.opacity -= 0.05;
+        
+        if (explosion.material.opacity > 0) {
+            requestAnimationFrame(expandExplosion);
+        } else {
+            scene.remove(explosion);
+        }
+    };
+    
+    expandExplosion();
+    
+    // Log before teleport
+    console.log(`Teleporting player from`, remotePlayer.position, `to`, position);
+    
+    // Teleport immediately
+    remotePlayer.position.set(position.x, position.y, position.z);
+    
+    // Reset rotation
+    remotePlayer.rotation.set(0, 0, 0);
+    
+    // Update target position for interpolation
+    remotePlayer.userData.targetPosition = new THREE.Vector3(position.x, position.y, position.z);
+    remotePlayer.userData.targetRotation = new THREE.Euler(0, 0, 0);
+    
+    // Create a respawn effect at new position
+    const respawnMarker = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 8, 8),
+        new THREE.MeshBasicMaterial({ 
+            color: 0x00ff00, 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.7
+        })
+    );
+    respawnMarker.position.copy(position);
+    scene.add(respawnMarker);
+    
+    // Animate the respawn marker
+    let markerScale = 1;
+    const shrinkMarker = () => {
+        markerScale -= 0.05;
+        respawnMarker.scale.set(markerScale, markerScale, markerScale);
+        
+        if (markerScale > 0) {
+            requestAnimationFrame(shrinkMarker);
+        } else {
+            scene.remove(respawnMarker);
+        }
+    };
+    
+    shrinkMarker();
+    
+    console.log(`Teleport complete, new position:`, remotePlayer.position);
+}

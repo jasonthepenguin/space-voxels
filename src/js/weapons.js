@@ -5,6 +5,9 @@ import { createExplosion } from './celestialBodies.js';
 export const MAX_LASERS = 20;
 export const MAX_FLASHES = 10;
 
+// Cached array of objects to test with raycaster
+let cachedObjectsToTest = [];
+
 // Ship type to laser color mapping
 const SHIP_LASER_COLORS = {
     'default': 0xff3333,         // Red for default ship
@@ -13,6 +16,29 @@ const SHIP_LASER_COLORS = {
     'Chris Ship': 0x3366cc       // Blue for Chris ship
 };
 
+// Shared resources for all lasers and flashes
+let sharedLaserGeometry;
+let sharedFlashGeometry;
+let laserMaterials = {};  // Materials keyed by color hex
+let flashMaterials = {};  // Materials keyed by color hex
+
+// Function to update the cached raycast targets
+export function updateRaycastTargets(sun, planets) {
+    cachedObjectsToTest = [];
+    
+    // Include sun
+    if (sun) cachedObjectsToTest.push(sun);
+    
+    // Include planets and moons
+    if (planets && planets.length) {
+        planets.forEach(planet => {
+            cachedObjectsToTest.push(planet);
+            // Include moon if the planet has one
+            if (planet.moon) cachedObjectsToTest.push(planet.moon);
+        });
+    }
+}
+
 // Initialize weapon systems
 export function initWeapons(scene) {
     const laserPool = [];
@@ -20,44 +46,74 @@ export function initWeapons(scene) {
     const flashPool = [];
     const raycaster = new THREE.Raycaster();
     
+    // Create shared geometries (only created once)
+    sharedLaserGeometry = new THREE.BoxGeometry(0.3, 0.3, 1);
+    sharedFlashGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+    
+    // Pre-create materials for each ship type
+    Object.entries(SHIP_LASER_COLORS).forEach(([shipType, colorHex]) => {
+        // Create laser material
+        laserMaterials[colorHex] = new THREE.MeshBasicMaterial({ 
+            color: colorHex, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+        
+        // Create flash material
+        flashMaterials[colorHex] = new THREE.MeshBasicMaterial({ 
+            color: colorHex, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+    });
+    
+    // Pre-create a default material
+    const defaultColorHex = 0xff0000;
+    laserMaterials[defaultColorHex] = new THREE.MeshBasicMaterial({ 
+        color: defaultColorHex, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    flashMaterials[defaultColorHex] = new THREE.MeshBasicMaterial({ 
+        color: defaultColorHex, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    
     return { laserPool, lasers, flashPool, raycaster };
 }
 
 // Get a laser from the pool
 export function getLaserFromPool(scene, laserPool, lasers) {
-    // Try to reuse an inactive laser
-    for (const laser of laserPool) {
-        if (!laser.visible) {
-            laser.visible = true;
-            return laser;
+    // Try to reuse an inactive laser first (most efficient)
+    for (let i = 0; i < laserPool.length; i++) {
+        if (!laserPool[i].visible) {
+            laserPool[i].visible = true;
+            return laserPool[i];
         }
     }
     
     // Create a new laser if pool isn't full
     if (laserPool.length < MAX_LASERS) {
-        const laserGeometry = new THREE.BoxGeometry(0.3, 0.3, 1);
-        const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
-        const newLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+        const defaultColorHex = 0xff0000;
+        const material = laserMaterials[defaultColorHex];
+        const newLaser = new THREE.Mesh(sharedLaserGeometry, material);
         newLaser.visible = true;
-        newLaser.name = "Laser_" + laserPool.length; // Give each laser a unique name
+        newLaser.name = "Laser_" + laserPool.length;
         scene.add(newLaser);
         laserPool.push(newLaser);
         return newLaser;
     }
     
-    // Recycle oldest inactive laser safely
-    for (let i = 0; i < lasers.length; i++) {
-        if (!lasers[i].visible) {
-            const reusableLaser = lasers.splice(i, 1)[0];
-            reusableLaser.visible = true;
-            return reusableLaser;
-        }
-    }
-
-    // If all lasers are active, recycle the oldest laser
+    // If all lasers are active, recycle the oldest one
     const oldestLaser = lasers.shift();
-    oldestLaser.visible = true;
-    return oldestLaser;
+    if (oldestLaser) {
+        oldestLaser.visible = true;
+        return oldestLaser;
+    }
+    
+    // Fallback - should rarely happen
+    return laserPool[0];
 }
 
 // Get a flash effect from the pool
@@ -72,11 +128,11 @@ export function getFlashFromPool(scene, flashPool) {
     
     // Create a new flash if pool isn't full
     if (flashPool.length < MAX_FLASHES) {
-        const flashGeometry = new THREE.SphereGeometry(1.2, 16, 16);
-        const flashMaterial = new THREE.MeshBasicMaterial({ color: 0xff3232, transparent: true, opacity: 0.8 });
-        const newFlash = new THREE.Mesh(flashGeometry, flashMaterial);
+        const defaultColorHex = 0xff0000;
+        const material = flashMaterials[defaultColorHex];
+        const newFlash = new THREE.Mesh(sharedFlashGeometry, material);
         newFlash.visible = false;
-        newFlash.name = "Flash_" + flashPool.length; // Give each flash a unique name
+        newFlash.name = "Flash_" + flashPool.length;
         scene.add(newFlash);
         flashPool.push(newFlash);
         return newFlash;
@@ -89,17 +145,82 @@ export function getFlashFromPool(scene, flashPool) {
     return oldestFlash;
 }
 
-// Shoot a laser
-export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets, socket, remotePlayersRef) {
-    // Play sound from pool if available
-    if (soundsLoaded) {
-        const availableSound = soundPool.find(s => s.audio.paused || s.audio.ended);
-        if (availableSound) {
-            availableSound.audio.currentTime = 0;
-            availableSound.audio.play().catch(e => {
+// Replace preloadSounds with Web Audio API implementation
+export function initAudioSystem() {
+    // Create audio context
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Buffer storage
+    const soundBuffers = {};
+    let isAudioInitialized = false;
+    
+    return {
+        audioContext,
+        soundBuffers,
+        isAudioInitialized,
+        
+        // Load a sound and store its buffer
+        loadSound: async function(name, url) {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                this.soundBuffers[name] = audioBuffer;
+                this.isAudioInitialized = true;
+                return audioBuffer;
+            } catch (error) {
+                console.warn('Error loading sound:', error);
+                return null;
+            }
+        },
+        
+        // Play a sound with optional parameters
+        playSound: function(name, options = {}) {
+            if (!this.isAudioInitialized || !this.soundBuffers[name]) return null;
+            
+            // Default options
+            const settings = {
+                volume: 0.5,
+                detune: 0,
+                ...options
+            };
+            
+            try {
+                // Create source
+                const source = this.audioContext.createBufferSource();
+                source.buffer = this.soundBuffers[name];
+                
+                // Create gain node for volume control
+                const gainNode = this.audioContext.createGain();
+                gainNode.gain.value = settings.volume;
+                
+                // Set detune if provided
+                if (settings.detune) {
+                    source.detune.value = settings.detune;
+                }
+                
+                // Connect nodes: source -> gain -> destination
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                // Start playback
+                source.start(0);
+                return source;
+            } catch (e) {
                 console.warn('Could not play sound:', e);
-            });
+                return null;
+            }
         }
+    };
+}
+
+// Update shootLaser function to use the Web Audio API system
+export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, audioSystem, orbitLines, sun, planets, socket, remotePlayersRef) {
+    // Play laser sound using the new audio system
+    if (audioSystem && audioSystem.isAudioInitialized) {
+        // Add small random detune for variety
+        const detune = Math.random() * 200 - 100; // -100 to 100 cents
+        audioSystem.playSound('laser', { volume: 0.4, detune });
     }
     
     // Use ship's forward direction for shooting, not camera direction
@@ -115,9 +236,6 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     
     // Get start position for the laser
     const startPos = rayOrigin.clone();
-    
-    // Check for intersections
-    const intersects = raycaster.intersectObjects(scene.children, true);
     
     // Create a list of objects to ignore (player and its children, lasers, orbit lines, flashes)
     const ignoreList = [player, ...player.children];
@@ -138,26 +256,31 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     orbitLines.forEach(line => {
         ignoreList.push(line);
     });
+
+    // Create a copy of cached objects to test
+    const objectsToTest = [...cachedObjectsToTest];
+    
+    // Add remote players (these change frequently so we add them each time)
+    if (remotePlayersRef) {
+        Object.values(remotePlayersRef).forEach(player => {
+            objectsToTest.push(player);
+            // Include player's children
+            player.children.forEach(child => objectsToTest.push(child));
+        });
+    }
+    
+    // ONLY raycast against objects we care about
+    const intersects = raycaster.intersectObjects(objectsToTest, true);
     
     let targetPoint, targetObject, targetParent, instanceId;
     let hitRemotePlayer = null;
     
     if (intersects.length > 0) {
-        // Filter out objects to ignore and anything too close to the player
+        // Only check distance from player to avoid too-close hits
         const filteredIntersects = intersects.filter(intersect => {
-            // Check if the object is in the ignore list or its parent is
-            const isIgnored = ignoreList.includes(intersect.object) || 
-                             ignoreList.includes(intersect.object.parent);
-            
-            // Check if the object name contains "OrbitLine" (as a fallback)
-            const isOrbitLine = intersect.object.name && intersect.object.name.includes("OrbitLine");
-            
             // Check if the intersection point is too close to the player
             const distanceFromPlayer = player.position.distanceTo(intersect.point);
-            const isTooClose = distanceFromPlayer < 6;
-            
-            // Only include intersections that are not ignored, not orbit lines, and not too close
-            return !isIgnored && !isOrbitLine && !isTooClose;
+            return distanceFromPlayer >= 6; // Only include if not too close
         });
         
         if (filteredIntersects.length > 0) {
@@ -165,58 +288,37 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             targetPoint = filteredIntersects[0].point;
             targetObject = filteredIntersects[0].object;
             
-            // Check if we hit a remote player
+            // Check if we hit a remote player - OPTIMIZED
             if (remotePlayersRef && Object.keys(remotePlayersRef).length > 0) {
-                console.log("Checking for remote player hits among", Object.keys(remotePlayersRef).length, "players");
-                
-                // Check if the hit object is part of a remote player
                 for (const playerId in remotePlayersRef) {
                     const remotePlayer = remotePlayersRef[playerId];
                     
-                    // Debug the remote player structure
-                    console.log(`Remote player ${playerId} structure:`, remotePlayer);
+                    // Check if direct hit on player or any child
+                    let isHit = targetObject === remotePlayer;
                     
-                    // The remote player IS the mesh in your implementation
-                    const isDirectHit = targetObject === remotePlayer;
-                    
-                    // Check if it's a child of the remote player
-                    let isChildHit = false;
-                    if (remotePlayer.children && remotePlayer.children.length > 0) {
-                        // Recursive function to check all descendants
-                        const checkChildren = (parent) => {
-                            for (const child of parent.children) {
-                                if (child === targetObject) return true;
-                                if (child.children && child.children.length > 0) {
-                                    if (checkChildren(child)) return true;
-                                }
+                    if (!isHit && remotePlayer.children) {
+                        for (const child of remotePlayer.children) {
+                            if (targetObject === child) {
+                                isHit = true;
+                                break;
                             }
-                            return false;
-                        };
-                        
-                        isChildHit = checkChildren(remotePlayer);
+                        }
                     }
                     
-                    if (isDirectHit || isChildHit) {
+                    if (isHit) {
                         hitRemotePlayer = playerId;
-                        console.log(`Hit remote player: ${playerId}`);
                         break;
                     }
                 }
             }
             
-            // Capture the instance ID if we hit an instanced mesh
+            // Capture instance ID for instanced meshes
             if (targetObject.isInstancedMesh) {
                 instanceId = filteredIntersects[0].instanceId;
             }
             
             // Find the parent group (sun, planet, or moon)
-            if (targetObject.isInstancedMesh) {
-                // If we hit an instanced mesh directly
-                targetParent = targetObject.parent;
-            } else {
-                // Otherwise use the parent
-                targetParent = targetObject.parent;
-            }
+            targetParent = targetObject.parent;
         } else {
             // Nothing valid hit, shoot into distance
             targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
@@ -244,7 +346,11 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     // Set laser color based on ship type
     if (player.userData && player.userData.shipType) {
         const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
-        laser.material.color.setHex(laserColor);
+        
+        // Use existing shared material instead of changing color
+        if (laserMaterials[laserColor]) {
+            laser.material = laserMaterials[laserColor];
+        }
     }
     
     // Set laser properties
@@ -259,33 +365,22 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         flash.position.copy(targetPoint);
         
         flash.name = "Flash"; // Add a name to help with identification
-
         flash.visible = true;
         flash.life = 0.2; // lifespan in seconds
         
-        // Set flash color based on ship type
+        // Set flash color based on ship type using shared materials
         if (player.userData && player.userData.shipType) {
             const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
-            flash.material.color.setHex(laserColor);
+            
+            // Use existing shared material instead of changing color
+            if (flashMaterials[laserColor]) {
+                flash.material = flashMaterials[laserColor];
+            }
         }
         
         // If we hit a remote player, send a hit event to the server
         if (hitRemotePlayer && socket) {
             console.log(`Sending playerHit event for player: ${hitRemotePlayer}`);
-            
-            // Remove the debug hit marker visualization
-            // We're commenting out this code to hide the collision shape
-            /*
-            const hitMarker = new THREE.Mesh(
-                new THREE.SphereGeometry(1, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true })
-            );
-            hitMarker.position.copy(targetPoint);
-            scene.add(hitMarker);
-            
-            // Remove after 1 second
-            setTimeout(() => scene.remove(hitMarker), 1000);
-            */
             
             // Show elimination message
             if (window.uiManager) {
@@ -303,7 +398,7 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         }
         
         // Create explosion
-        if (targetParent && 
+        if (targetObject && targetParent && 
             (targetParent === sun || 
              planets.includes(targetParent) || 
              planets.some(p => p.moon && targetParent === p.moon))) {
@@ -315,10 +410,8 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             const isSaturnRings = targetParent.name === 'Saturn' && 
                                  targetObject === targetParent.ringInstancedMesh;
             
-            setTimeout(() => {
-                // Pass the instanceId and a flag indicating if this is Saturn's rings
-                createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
-            }, 300);
+            // OPTIMIZATION: Create explosion immediately - no setTimeout
+            createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
         }
     }
 }
@@ -335,24 +428,6 @@ export function updateLasers(lasers, delta) {
         }
     }
 }
-
-// Preload sound effects
-export function preloadSounds(laserSoundUrl, MAX_SOUNDS) {
-    const soundPool = [];
-    
-    // Create a pool of audio objects using imported sound URL
-    for (let i = 0; i < MAX_SOUNDS; i++) {
-        const sound = new Audio(laserSoundUrl);
-        sound.load(); // Preload the sound
-        sound.volume = 0.5; // Set appropriate volume
-        soundPool.push({
-            audio: sound,
-            isPlaying: false
-        });
-    }
-    
-    return soundPool;
-} 
 
 // Update flashes (reduce life, hide when expired)
 export function updateFlashes(flashPool, delta) {
