@@ -2,19 +2,22 @@ import { io } from 'socket.io-client';
 
 import {
     addOrUpdateRemotePlayer,
-    removeRemotePlayer
-
+    removeRemotePlayer,
+    respawnRemotePlayer
 } from './remotePlayers.js';
 
+import { respawnLocalPlayer } from './player.js';
+import { respawnAllCelestialBodies } from './celestialBodies.js';
 
 let scene; // scene reference
+let player = null; // reference to local player
+let updateCameraPositionFn = null; // reference to camera position update function
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
 
 export let serverTimeOffset = 0;
 
 export function initNetworking(updatePlayerCount, gameScene) {
-
     scene = gameScene; // Store the scene reference
 
     const socket = io(SOCKET_SERVER_URL, {
@@ -60,21 +63,21 @@ export function initNetworking(updatePlayerCount, gameScene) {
     });
 
     socket.on('respawnPlanets', () => {
-        window.respawnPlanets();
+        respawnAllCelestialBodies(scene);
         console.log('Received planet respawn event from server.');
     });
     
-    // Add new event handler for player hit
+    // Updated event handler for player hit using imported functions
     socket.on('playerHit', (data) => {
         console.log(`Received playerHit event for: ${data.targetId}, our ID: ${socket.id}`);
-        if (data.targetId === socket.id) {
+        if (data.targetId === socket.id && player) {
             // We were hit, respawn our local player
             console.log("We were hit! Respawning local player...");
-            window.respawnLocalPlayer();
-        } else {
+            respawnLocalPlayer(player, scene, updateCameraPositionFn, socket, true);
+        } else if (data.targetId !== socket.id) {
             // Another player was hit, respawn them
             console.log(`Remote player ${data.targetId} was hit, respawning them`);
-            window.respawnRemotePlayer(data.targetId, data.position);
+            respawnRemotePlayer(data.targetId, data.position, scene);
         }
     });
 
@@ -88,6 +91,12 @@ export function initNetworking(updatePlayerCount, gameScene) {
     }, 5000);
 
     return { socket, playerId: socket.id, isConnected: true };
+}
+
+// Function to update the player reference when it's created
+export function setPlayerReference(playerRef, cameraUpdateFn) {
+    player = playerRef;
+    updateCameraPositionFn = cameraUpdateFn;
 }
 
 export function sendPlayerReady(socket, isConnected, shipType = 'default') {

@@ -35,8 +35,7 @@ import {
     createPlayer,
     handleMovement,
     updateCameraPosition as updatePlayerCamera,
-    respawnLocalPlayer,
-    respawnRemotePlayer
+    respawnLocalPlayer
 } from './player.js';
 
 import {
@@ -53,7 +52,8 @@ import {
     initNetworking,
     sendPlayerReady,
     sendPlayerNotReady,
-    updatePlayerCountUI
+    updatePlayerCountUI,
+    setPlayerReference
 } from './networking.js';
 
 import {
@@ -145,13 +145,6 @@ import {
     registerPointerLockCallback
 } from './desktopControls.js';
 
-window.respawnPlanets = function() {
-    respawnAllCelestialBodies(sun, planets);
-    console.log('Planets respawned locally.');
-};
-
-
-
 // Expose gameStarted to window for UI access
 Object.defineProperty(window, 'gameStarted', {
     get: function() {
@@ -235,7 +228,7 @@ function init() {
     // Setup event listeners
     setupEventListeners();
     
-    // Connect to multiplayer server
+    // Connect to multiplayer server - updated with no player reference yet
     const networkingData = initNetworking(updatePlayerCount, scene);
     socket = networkingData.socket;
     playerId = networkingData.playerId;
@@ -475,6 +468,9 @@ function startGame() {
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
     
+    // Set player reference in networking module
+    setPlayerReference(player, updateCameraPosition);
+    
     // Show mobile controls if on mobile
     if (isMobile) {
         showMobileControls();
@@ -548,45 +544,3 @@ function updateFOV(delta, boostActive) {
         window.boostOverlay.style.opacity = '0'; // Hide the overlay
     }
 }
-
-
-
-
-
-// Add this function for testing
-window.testHitPlayer = function(playerId) {
-    const remotePlayers = getAllRemotePlayers();
-    if (socket && remotePlayers[playerId]) {
-        console.log(`Manually testing hit on player: ${playerId}`);
-        socket.emit('playerHit', { 
-            targetId: playerId,
-            position: {
-                x: Math.random() * 100 - 50,
-                y: Math.random() * 50 + 10,
-                z: Math.random() * 100 - 50
-            }
-        });
-        return true;
-    }
-    return false;
-};
-
-
-window.respawnRemotePlayer = function(playerId, position) {
-
-    console.log(`Attempting to respawn player: ${playerId}`);
-
-    const remotePlayers = getAllRemotePlayers();
-    if (!remotePlayers[playerId]) {
-        console.error('Remote player ${playerId} not found in remotePlayers object');
-        return;
-    }
-
-    const remotePlayer = remotePlayers[playerId];
-    respawnRemotePlayer(remotePlayer, position, scene);
-};
-
-// Expose the function to the window object for networking
-window.respawnLocalPlayer = function() {
-    respawnLocalPlayer(player, scene, updateCameraPosition, socket, isConnected);
-};
