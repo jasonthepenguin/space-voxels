@@ -71,7 +71,8 @@ export const planetData = [
 export function createSun(scene, voxelGeometry) {
     const sun = new THREE.Group();
     sun.name = "Sun";
-    sun.blockDict = {};
+    sun.blockDict = new Map();
+    sun.instanceIdToPos = new Map();
     
     // Count voxels first
     let voxelCount = 0;
@@ -104,8 +105,10 @@ export function createSun(scene, voxelGeometry) {
                     matrix.setPosition(x, y, z);
                     sunMesh.setMatrixAt(index, matrix);
                     
-                    // Store voxel index in dictionary with position as key
-                    sun.blockDict[`${x},${y},${z}`] = index;
+                    // Store voxel index in map with position as key
+                    const posKey = `${x},${y},${z}`;
+                    sun.blockDict.set(posKey, index);
+                    sun.instanceIdToPos.set(index, {x, y, z});
                     
                     index++;
                 }
@@ -158,7 +161,8 @@ export function createPlanets(scene, voxelGeometry, planetData, serverTimeOffset
         planet.orbitSpeed = data.orbitSpeed;
         const syncedTime = (Date.now() - serverTimeOffset) / 1000; // seconds
         planet.orbitAngle = (syncedTime * data.orbitSpeed) % (Math.PI * 2);
-        planet.blockDict = {};
+        planet.blockDict = new Map();
+        planet.instanceIdToPos = new Map();
         
         const voxelRange = Math.floor(data.size) + 1;
         const maxDistance = data.size * data.size;
@@ -269,8 +273,10 @@ export function createPlanets(scene, voxelGeometry, planetData, serverTimeOffset
                             planetMesh.setColorAt(index, color);
                         }
                         
-                        // Store voxel index in dictionary with position as key
-                        planet.blockDict[`${x},${y},${z}`] = index;
+                        // Store voxel index in map with position as key
+                        const posKey = `${x},${y},${z}`;
+                        planet.blockDict.set(posKey, index);
+                        planet.instanceIdToPos.set(index, {x, y, z});
                         
                         index++;
                     }
@@ -308,7 +314,8 @@ function createSaturnRings(planet, planetSize) {
     const ringRadius = 6 * (planetSize / 3.5);
     const ringThickness = 0.5 * (planetSize / 3.5);
     
-    planet.ringDict = {};
+    planet.ringDict = new Map();
+    planet.ringInstanceIdToPos = new Map();
     
     // Count ring voxels first
     let ringVoxelCount = 0;
@@ -342,8 +349,10 @@ function createSaturnRings(planet, planetSize) {
                 matrix.setPosition(x, 0, z);
                 ringMesh.setMatrixAt(index, matrix);
                 
-                // Store ring voxel index in dictionary
-                planet.ringDict[`${x},0,${z}`] = index;
+                // Store ring voxel index in map
+                const posKey = `${x},0,${z}`;
+                planet.ringDict.set(posKey, index);
+                planet.ringInstanceIdToPos.set(index, {x, y: 0, z});
                 
                 index++;
             }
@@ -369,7 +378,8 @@ export function createMoon(planets) {
         moon.position.set(5, 0, 0);
         moon.rotationSpeed = 0.08;
         moon.rotationAngle = 0;
-        moon.blockDict = {};
+        moon.blockDict = new Map();
+        moon.instanceIdToPos = new Map();
         
         const moonSize = 0.7;
         const moonVoxelRange = Math.floor(moonSize) + 1;
@@ -408,8 +418,10 @@ export function createMoon(planets) {
                         matrix.setPosition(x, y, z);
                         moonMesh.setMatrixAt(index, matrix);
                         
-                        // Store voxel index in dictionary
-                        moon.blockDict[`${x},${y},${z}`] = index;
+                        // Store voxel index in map
+                        const posKey = `${x},${y},${z}`;
+                        moon.blockDict.set(posKey, index);
+                        moon.instanceIdToPos.set(index, {x, y, z});
                         
                         index++;
                     }
@@ -467,18 +479,19 @@ export function createExplosion(parent, targetPos, instanceId = null, isSaturnRi
         
         // Initialize destroyedRingVoxels if it doesn't exist
         if (!parent.destroyedRingVoxels) {
-            parent.destroyedRingVoxels = {};
+            parent.destroyedRingVoxels = new Map();
         }
         
-        // Find and store the original position before removing from ringDict
-        for (const [key, value] of Object.entries(parent.ringDict)) {
-            if (value === instanceId) {
-                // Store the original position (x,y,z from the key)
-                const [x, y, z] = key.split(',').map(Number);
-                parent.destroyedRingVoxels[instanceId] = { x, y, z };
-                delete parent.ringDict[key];
-                break;
-            }
+        // Use the reverse lookup map to find the position directly
+        if (parent.ringInstanceIdToPos && parent.ringInstanceIdToPos.has(instanceId)) {
+            const position = parent.ringInstanceIdToPos.get(instanceId);
+            const posKey = `${position.x},${position.y},${position.z}`;
+            
+            // Store the original position
+            parent.destroyedRingVoxels.set(instanceId, position);
+
+            // Remove from the ringDict
+            parent.ringDict.delete(posKey);
         }
     } else if (parent.instancedMesh) {
         // Handle regular planet/sun voxels
@@ -487,18 +500,19 @@ export function createExplosion(parent, targetPos, instanceId = null, isSaturnRi
         
         // Initialize destroyedVoxels if it doesn't exist
         if (!parent.destroyedVoxels) {
-            parent.destroyedVoxels = {};
+            parent.destroyedVoxels = new Map();
         }
         
-        // Find and store the original position before removing from blockDict
-        for (const [key, value] of Object.entries(parent.blockDict)) {
-            if (value === instanceId) {
-                // Store the original position (x,y,z from the key)
-                const [x, y, z] = key.split(',').map(Number);
-                parent.destroyedVoxels[instanceId] = { x, y, z };
-                delete parent.blockDict[key];
-                break;
-            }
+        // Use the reverse lookup map to find the position directly
+        if (parent.instanceIdToPos && parent.instanceIdToPos.has(instanceId)) {
+            const position = parent.instanceIdToPos.get(instanceId);
+            const posKey = `${position.x},${position.y},${position.z}`;
+            
+            // Store the original position
+            parent.destroyedVoxels.set(instanceId, position);
+            
+            // Remove from the blockDict
+            parent.blockDict.delete(posKey);
         }
     }
 }
@@ -510,39 +524,43 @@ export function respawnPlanetVoxels(parent) {
     const matrix = new THREE.Matrix4();
     
     // Respawn main body voxels
-    if (parent.instancedMesh && parent.destroyedVoxels) {
-        for (const [instanceId, position] of Object.entries(parent.destroyedVoxels)) {
+    if (parent.instancedMesh && parent.destroyedVoxels && parent.destroyedVoxels.size > 0) {
+        // Use Map entries instead of Object.entries
+        for (const [instanceId, position] of parent.destroyedVoxels.entries()) {
             // Move voxel back to its original position
             matrix.setPosition(position.x, position.y, position.z);
             parent.instancedMesh.setMatrixAt(parseInt(instanceId), matrix);
             
             // Restore entry in blockDict
-            parent.blockDict[`${position.x},${position.y},${position.z}`] = parseInt(instanceId);
+            const posKey = `${position.x},${position.y},${position.z}`;
+            parent.blockDict.set(posKey, parseInt(instanceId));
         }
         
         // Update the instance matrix
         parent.instancedMesh.instanceMatrix.needsUpdate = true;
         
         // Clear the destroyed voxels record
-        parent.destroyedVoxels = {};
+        parent.destroyedVoxels.clear();
     }
     
     // Respawn Saturn's rings if applicable
-    if (parent.ringInstancedMesh && parent.destroyedRingVoxels) {
-        for (const [instanceId, position] of Object.entries(parent.destroyedRingVoxels)) {
+    if (parent.ringInstancedMesh && parent.destroyedRingVoxels && parent.destroyedRingVoxels.size > 0) {
+        // Use Map entries instead of Object.entries
+        for (const [instanceId, position] of parent.destroyedRingVoxels.entries()) {
             // Move ring voxel back to its original position
             matrix.setPosition(position.x, position.y, position.z);
             parent.ringInstancedMesh.setMatrixAt(parseInt(instanceId), matrix);
             
             // Restore entry in ringDict
-            parent.ringDict[`${position.x},${position.y},${position.z}`] = parseInt(instanceId);
+            const posKey = `${position.x},${position.y},${position.z}`;
+            parent.ringDict.set(posKey, parseInt(instanceId));
         }
         
         // Update the instance matrix
         parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
         
         // Clear the destroyed ring voxels record
-        parent.destroyedRingVoxels = {};
+        parent.destroyedRingVoxels.clear();
     }
 }
 
