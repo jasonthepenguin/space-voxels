@@ -47,7 +47,7 @@ import {
     initWeapons,
     shootLaser,
     updateLasers,
-    preloadSounds,
+    initAudioSystem,
     updateFlashes,
     updateRaycastTargets
 } from './weapons.js';
@@ -157,6 +157,9 @@ Object.defineProperty(window, 'gameStarted', {
 // Expose resetGame to window for UI access
 window.resetGame = resetGame;
 
+// Replace soundPool and soundsLoaded variables with audioSystem
+let audioSystem;
+
 // Initialize the game
 function init() {
     // Create scene
@@ -248,9 +251,8 @@ function init() {
     // Start animation loop
     animate();
     
-    // Preload sounds
-    soundPool = preloadSounds(laserSoundUrl, MAX_SOUNDS);
-    soundsLoaded = true;
+    // Initialize audio system instead of preloading sounds
+    audioSystem = initAudioSystem();
     
     console.log("Game initialized successfully");
     console.log("Mobile device detected:", isMobile);
@@ -278,6 +280,11 @@ function setupEventListeners() {
     } else {
         initDesktopControls();
     }
+    
+    // Add event listeners to resume audio context on user interaction
+    ['click', 'touchstart', 'keydown'].forEach(eventType => {
+        document.addEventListener(eventType, resumeAudioContext, { once: true });
+    });
     
     // Window resize event
     window.addEventListener('resize', () => {
@@ -448,8 +455,7 @@ function handleAutoFire(currentTime) {
             laserPool, 
             lasers, 
             flashPool, 
-            soundPool, 
-            soundsLoaded, 
+            audioSystem,
             orbitLines, 
             sun, 
             planets, 
@@ -463,6 +469,14 @@ function handleAutoFire(currentTime) {
 // New function to start the game
 function startGame() {
     gameStarted = true;
+    
+    // Resume audio context on user interaction
+    resumeAudioContext();
+    
+    // Load sounds if not already loaded
+    if (audioSystem && !audioSystem.isAudioInitialized) {
+        audioSystem.loadSound('laser', laserSoundUrl);
+    }
     
     // Get the selected ship type from the UI manager
     const selectedShipType = uiManager.getSelectedShip();
@@ -547,5 +561,12 @@ function updateFOV(delta, boostActive) {
         window.boostOverlay.style.opacity = '0.4'; // Show the overlay
     } else if (window.boostOverlay) {
         window.boostOverlay.style.opacity = '0'; // Hide the overlay
+    }
+}
+
+// Add a function to resume audio context on user interaction
+function resumeAudioContext() {
+    if (audioSystem && audioSystem.audioContext.state === 'suspended') {
+        audioSystem.audioContext.resume();
     }
 }

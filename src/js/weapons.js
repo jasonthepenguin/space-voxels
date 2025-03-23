@@ -145,17 +145,82 @@ export function getFlashFromPool(scene, flashPool) {
     return oldestFlash;
 }
 
-// Shoot a laser - modified to use shared materials
-export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets, socket, remotePlayersRef) {
-    // Play sound from pool if available
-    if (soundsLoaded) {
-        const availableSound = soundPool.find(s => s.audio.paused || s.audio.ended);
-        if (availableSound) {
-            availableSound.audio.currentTime = 0;
-            availableSound.audio.play().catch(e => {
+// Replace preloadSounds with Web Audio API implementation
+export function initAudioSystem() {
+    // Create audio context
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Buffer storage
+    const soundBuffers = {};
+    let isAudioInitialized = false;
+    
+    return {
+        audioContext,
+        soundBuffers,
+        isAudioInitialized,
+        
+        // Load a sound and store its buffer
+        loadSound: async function(name, url) {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                this.soundBuffers[name] = audioBuffer;
+                this.isAudioInitialized = true;
+                return audioBuffer;
+            } catch (error) {
+                console.warn('Error loading sound:', error);
+                return null;
+            }
+        },
+        
+        // Play a sound with optional parameters
+        playSound: function(name, options = {}) {
+            if (!this.isAudioInitialized || !this.soundBuffers[name]) return null;
+            
+            // Default options
+            const settings = {
+                volume: 0.5,
+                detune: 0,
+                ...options
+            };
+            
+            try {
+                // Create source
+                const source = this.audioContext.createBufferSource();
+                source.buffer = this.soundBuffers[name];
+                
+                // Create gain node for volume control
+                const gainNode = this.audioContext.createGain();
+                gainNode.gain.value = settings.volume;
+                
+                // Set detune if provided
+                if (settings.detune) {
+                    source.detune.value = settings.detune;
+                }
+                
+                // Connect nodes: source -> gain -> destination
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                // Start playback
+                source.start(0);
+                return source;
+            } catch (e) {
                 console.warn('Could not play sound:', e);
-            });
+                return null;
+            }
         }
+    };
+}
+
+// Update shootLaser function to use the Web Audio API system
+export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, audioSystem, orbitLines, sun, planets, socket, remotePlayersRef) {
+    // Play laser sound using the new audio system
+    if (audioSystem && audioSystem.isAudioInitialized) {
+        // Add small random detune for variety
+        const detune = Math.random() * 200 - 100; // -100 to 100 cents
+        audioSystem.playSound('laser', { volume: 0.4, detune });
     }
     
     // Use ship's forward direction for shooting, not camera direction
@@ -363,24 +428,6 @@ export function updateLasers(lasers, delta) {
         }
     }
 }
-
-// Preload sound effects
-export function preloadSounds(laserSoundUrl, MAX_SOUNDS) {
-    const soundPool = [];
-    
-    // Create a pool of audio objects using imported sound URL
-    for (let i = 0; i < MAX_SOUNDS; i++) {
-        const sound = new Audio(laserSoundUrl);
-        sound.load(); // Preload the sound
-        sound.volume = 0.5; // Set appropriate volume
-        soundPool.push({
-            audio: sound,
-            isPlaying: false
-        });
-    }
-    
-    return soundPool;
-} 
 
 // Update flashes (reduce life, hide when expired)
 export function updateFlashes(flashPool, delta) {
