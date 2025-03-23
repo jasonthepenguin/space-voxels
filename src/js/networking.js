@@ -3,10 +3,10 @@ import { io } from 'socket.io-client';
 import {
     addOrUpdateRemotePlayer,
     removeRemotePlayer,
-    respawnRemotePlayer
+    respawnRemotePlayer,
+    respawnLocalPlayer
 } from './remotePlayers.js';
 
-import { respawnLocalPlayer } from './player.js';
 import { respawnAllCelestialBodies } from './celestialBodies.js';
 
 let scene; // scene reference

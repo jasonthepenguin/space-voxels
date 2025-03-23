@@ -34,9 +34,12 @@ import {
 import {
     createPlayer,
     handleMovement,
-    updateCameraPosition as updatePlayerCamera,
-    respawnLocalPlayer
+    updateCameraPosition as updatePlayerCamera
 } from './player.js';
+
+import {
+    respawnLocalPlayer
+} from './remotePlayers.js';
 
 import {
     MAX_LASERS,
@@ -122,8 +125,6 @@ const textureLoader = new THREE.TextureLoader();
 // Add this shared geometry for all voxels
 const voxelGeometry = new THREE.BoxGeometry(1, 1, 1);
 
-// Keyboard state
-//const remotePlayers = {};
 
 // FOV constants
 const DEFAULT_FOV = 75;
