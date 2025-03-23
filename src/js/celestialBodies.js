@@ -451,126 +451,54 @@ export function createExplosion(parent, targetPos, instanceId = null, isSaturnRi
         return;
     }
     
-    // If we have a specific instanceId, only destroy that voxel
-    if (instanceId !== null) {
-        // Hide the specific voxel by moving it far away
-        const matrix = new THREE.Matrix4();
-        matrix.setPosition(1000, 1000, 1000); // Move far away
-        
-        if (isSaturnRings && parent.ringInstancedMesh) {
-            // Handle Saturn's rings
-            parent.ringInstancedMesh.setMatrixAt(instanceId, matrix);
-            parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
-            
-            // Initialize destroyedRingVoxels if it doesn't exist
-            if (!parent.destroyedRingVoxels) {
-                parent.destroyedRingVoxels = {};
-            }
-            
-            // Find and store the original position before removing from ringDict
-            for (const [key, value] of Object.entries(parent.ringDict)) {
-                if (value === instanceId) {
-                    // Store the original position (x,y,z from the key)
-                    const [x, y, z] = key.split(',').map(Number);
-                    parent.destroyedRingVoxels[instanceId] = { x, y, z };
-                    delete parent.ringDict[key];
-                    break;
-                }
-            }
-        } else if (parent.instancedMesh) {
-            // Handle regular planet/sun voxels
-            parent.instancedMesh.setMatrixAt(instanceId, matrix);
-            parent.instancedMesh.instanceMatrix.needsUpdate = true;
-            
-            // Initialize destroyedVoxels if it doesn't exist
-            if (!parent.destroyedVoxels) {
-                parent.destroyedVoxels = {};
-            }
-            
-            // Find and store the original position before removing from blockDict
-            for (const [key, value] of Object.entries(parent.blockDict)) {
-                if (value === instanceId) {
-                    // Store the original position (x,y,z from the key)
-                    const [x, y, z] = key.split(',').map(Number);
-                    parent.destroyedVoxels[instanceId] = { x, y, z };
-                    delete parent.blockDict[key];
-                    break;
-                }
-            }
-        }
-        
-        return;
+    // We need instanceId to destroy a specific voxel
+    if (instanceId === null) {
+        return; // No valid instanceId means no explosion
     }
     
-    // Fallback to original radius-based explosion if no instanceId is provided
-    const radius = 1.5;
-    
-    // List of blocks to destroy (by index)
-    const blocksToDestroy = [];
-    
-    // Check blocks in parent's blockDict
-    if (parent.blockDict) {
-        for (let x = Math.floor(targetPos.x - radius); x <= Math.ceil(targetPos.x + radius); x++) {
-            for (let y = Math.floor(targetPos.y - radius); y <= Math.ceil(targetPos.y + radius); y++) {
-                for (let z = Math.floor(targetPos.z - radius); z <= Math.ceil(targetPos.z + radius); z++) {
-                    const key = `${x},${y},${z}`;
-                    if (parent.blockDict[key] !== undefined) {
-                        const blockIndex = parent.blockDict[key];
-                        const blockPos = new THREE.Vector3(x, y, z);
-                        const distance = blockPos.distanceTo(targetPos);
-                        if (distance <= radius) {
-                            blocksToDestroy.push(blockIndex);
-                            delete parent.blockDict[key];
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Check blocks in parent's ringDict (for Saturn's rings)
-    if (parent.ringDict) {
-        for (let x = Math.floor(targetPos.x - radius); x <= Math.ceil(targetPos.x + radius); x++) {
-            for (let y = Math.floor(targetPos.y - radius); y <= Math.ceil(targetPos.y + radius); y++) {
-                for (let z = Math.floor(targetPos.z - radius); z <= Math.ceil(targetPos.z + radius); z++) {
-                    const key = `${x},${y},${z}`;
-                    if (parent.ringDict[key] !== undefined) {
-                        const blockIndex = parent.ringDict[key];
-                        const blockPos = new THREE.Vector3(x, y, z);
-                        const distance = blockPos.distanceTo(targetPos);
-                        if (distance <= radius) {
-                            blocksToDestroy.push(blockIndex);
-                            delete parent.ringDict[key];
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Hide destroyed blocks by moving them far away
+    // Hide the specific voxel by moving it far away
     const matrix = new THREE.Matrix4();
     matrix.setPosition(1000, 1000, 1000); // Move far away
     
-    // Apply to main instanced mesh
-    if (parent.instancedMesh) {
-        blocksToDestroy.forEach(index => {
-            parent.instancedMesh.setMatrixAt(index, matrix);
-        });
+    if (isSaturnRings && parent.ringInstancedMesh) {
+        // Handle Saturn's rings
+        parent.ringInstancedMesh.setMatrixAt(instanceId, matrix);
+        parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
         
-        if (blocksToDestroy.length > 0) {
-            parent.instancedMesh.instanceMatrix.needsUpdate = true;
+        // Initialize destroyedRingVoxels if it doesn't exist
+        if (!parent.destroyedRingVoxels) {
+            parent.destroyedRingVoxels = {};
         }
-    }
-    
-    // Apply to ring instanced mesh if it exists
-    if (parent.ringInstancedMesh) {
-        blocksToDestroy.forEach(index => {
-            parent.ringInstancedMesh.setMatrixAt(index, matrix);
-        });
         
-        if (blocksToDestroy.length > 0) {
-            parent.ringInstancedMesh.instanceMatrix.needsUpdate = true;
+        // Find and store the original position before removing from ringDict
+        for (const [key, value] of Object.entries(parent.ringDict)) {
+            if (value === instanceId) {
+                // Store the original position (x,y,z from the key)
+                const [x, y, z] = key.split(',').map(Number);
+                parent.destroyedRingVoxels[instanceId] = { x, y, z };
+                delete parent.ringDict[key];
+                break;
+            }
+        }
+    } else if (parent.instancedMesh) {
+        // Handle regular planet/sun voxels
+        parent.instancedMesh.setMatrixAt(instanceId, matrix);
+        parent.instancedMesh.instanceMatrix.needsUpdate = true;
+        
+        // Initialize destroyedVoxels if it doesn't exist
+        if (!parent.destroyedVoxels) {
+            parent.destroyedVoxels = {};
+        }
+        
+        // Find and store the original position before removing from blockDict
+        for (const [key, value] of Object.entries(parent.blockDict)) {
+            if (value === instanceId) {
+                // Store the original position (x,y,z from the key)
+                const [x, y, z] = key.split(',').map(Number);
+                parent.destroyedVoxels[instanceId] = { x, y, z };
+                delete parent.blockDict[key];
+                break;
+            }
         }
     }
 }
