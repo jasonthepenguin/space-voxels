@@ -16,6 +16,12 @@ const SHIP_LASER_COLORS = {
     'Chris Ship': 0x3366cc       // Blue for Chris ship
 };
 
+// Shared resources for all lasers and flashes
+let sharedLaserGeometry;
+let sharedFlashGeometry;
+let laserMaterials = {};  // Materials keyed by color hex
+let flashMaterials = {};  // Materials keyed by color hex
+
 // Function to update the cached raycast targets
 export function updateRaycastTargets(sun, planets) {
     cachedObjectsToTest = [];
@@ -40,6 +46,40 @@ export function initWeapons(scene) {
     const flashPool = [];
     const raycaster = new THREE.Raycaster();
     
+    // Create shared geometries (only created once)
+    sharedLaserGeometry = new THREE.BoxGeometry(0.3, 0.3, 1);
+    sharedFlashGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+    
+    // Pre-create materials for each ship type
+    Object.entries(SHIP_LASER_COLORS).forEach(([shipType, colorHex]) => {
+        // Create laser material
+        laserMaterials[colorHex] = new THREE.MeshBasicMaterial({ 
+            color: colorHex, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+        
+        // Create flash material
+        flashMaterials[colorHex] = new THREE.MeshBasicMaterial({ 
+            color: colorHex, 
+            transparent: true, 
+            opacity: 0.8 
+        });
+    });
+    
+    // Pre-create a default material
+    const defaultColorHex = 0xff0000;
+    laserMaterials[defaultColorHex] = new THREE.MeshBasicMaterial({ 
+        color: defaultColorHex, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    flashMaterials[defaultColorHex] = new THREE.MeshBasicMaterial({ 
+        color: defaultColorHex, 
+        transparent: true, 
+        opacity: 0.8 
+    });
+    
     return { laserPool, lasers, flashPool, raycaster };
 }
 
@@ -55,9 +95,9 @@ export function getLaserFromPool(scene, laserPool, lasers) {
     
     // Create a new laser if pool isn't full
     if (laserPool.length < MAX_LASERS) {
-        const laserGeometry = new THREE.BoxGeometry(0.3, 0.3, 1);
-        const laserMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
-        const newLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+        const defaultColorHex = 0xff0000;
+        const material = laserMaterials[defaultColorHex];
+        const newLaser = new THREE.Mesh(sharedLaserGeometry, material);
         newLaser.visible = true;
         newLaser.name = "Laser_" + laserPool.length;
         scene.add(newLaser);
@@ -66,7 +106,6 @@ export function getLaserFromPool(scene, laserPool, lasers) {
     }
     
     // If all lasers are active, recycle the oldest one
-    // This is faster than searching through all lasers again
     const oldestLaser = lasers.shift();
     if (oldestLaser) {
         oldestLaser.visible = true;
@@ -89,11 +128,11 @@ export function getFlashFromPool(scene, flashPool) {
     
     // Create a new flash if pool isn't full
     if (flashPool.length < MAX_FLASHES) {
-        const flashGeometry = new THREE.SphereGeometry(1.2, 16, 16);
-        const flashMaterial = new THREE.MeshBasicMaterial({ color: 0xff3232, transparent: true, opacity: 0.8 });
-        const newFlash = new THREE.Mesh(flashGeometry, flashMaterial);
+        const defaultColorHex = 0xff0000;
+        const material = flashMaterials[defaultColorHex];
+        const newFlash = new THREE.Mesh(sharedFlashGeometry, material);
         newFlash.visible = false;
-        newFlash.name = "Flash_" + flashPool.length; // Give each flash a unique name
+        newFlash.name = "Flash_" + flashPool.length;
         scene.add(newFlash);
         flashPool.push(newFlash);
         return newFlash;
@@ -106,7 +145,7 @@ export function getFlashFromPool(scene, flashPool) {
     return oldestFlash;
 }
 
-// Shoot a laser
+// Shoot a laser - modified to use shared materials
 export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPool, soundPool, soundsLoaded, orbitLines, sun, planets, socket, remotePlayersRef) {
     // Play sound from pool if available
     if (soundsLoaded) {
@@ -186,14 +225,8 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             
             // Check if we hit a remote player - OPTIMIZED
             if (remotePlayersRef && Object.keys(remotePlayersRef).length > 0) {
-                // REMOVE CONSOLE LOGGING FOR PERFORMANCE
-                // console.log("Checking for remote player hits among", Object.keys(remotePlayersRef).length, "players");
-                
                 for (const playerId in remotePlayersRef) {
                     const remotePlayer = remotePlayersRef[playerId];
-                    
-                    // REMOVE DEBUG LOGGING
-                    // console.log(`Remote player ${playerId} structure:`, remotePlayer);
                     
                     // Check if direct hit on player or any child
                     let isHit = targetObject === remotePlayer;
@@ -209,8 +242,6 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
                     
                     if (isHit) {
                         hitRemotePlayer = playerId;
-                        // REMOVE DEBUG LOGGING
-                        // console.log(`Hit remote player: ${playerId}`);
                         break;
                     }
                 }
@@ -250,7 +281,11 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     // Set laser color based on ship type
     if (player.userData && player.userData.shipType) {
         const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
-        laser.material.color.setHex(laserColor);
+        
+        // Use existing shared material instead of changing color
+        if (laserMaterials[laserColor]) {
+            laser.material = laserMaterials[laserColor];
+        }
     }
     
     // Set laser properties
@@ -265,33 +300,22 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         flash.position.copy(targetPoint);
         
         flash.name = "Flash"; // Add a name to help with identification
-
         flash.visible = true;
         flash.life = 0.2; // lifespan in seconds
         
-        // Set flash color based on ship type
+        // Set flash color based on ship type using shared materials
         if (player.userData && player.userData.shipType) {
             const laserColor = SHIP_LASER_COLORS[player.userData.shipType] || 0xff0000;
-            flash.material.color.setHex(laserColor);
+            
+            // Use existing shared material instead of changing color
+            if (flashMaterials[laserColor]) {
+                flash.material = flashMaterials[laserColor];
+            }
         }
         
         // If we hit a remote player, send a hit event to the server
         if (hitRemotePlayer && socket) {
             console.log(`Sending playerHit event for player: ${hitRemotePlayer}`);
-            
-            // Remove the debug hit marker visualization
-            // We're commenting out this code to hide the collision shape
-            /*
-            const hitMarker = new THREE.Mesh(
-                new THREE.SphereGeometry(1, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true })
-            );
-            hitMarker.position.copy(targetPoint);
-            scene.add(hitMarker);
-            
-            // Remove after 1 second
-            setTimeout(() => scene.remove(hitMarker), 1000);
-            */
             
             // Show elimination message
             if (window.uiManager) {

@@ -203,7 +203,7 @@ function init() {
     // Create UI elements (crosshair)
     crosshair = createUI();
 
-    // Initialize weapon systems
+    // Initialize weapon systems with the optimized shared resources
     const weaponSystems = initWeapons(scene);
     laserPool = weaponSystems.laserPool;
     lasers = weaponSystems.lasers;
