@@ -48,7 +48,8 @@ import {
     shootLaser,
     updateLasers,
     preloadSounds,
-    updateFlashes
+    updateFlashes,
+    updateRaycastTargets
 } from './weapons.js';
 
 import {
@@ -220,6 +221,9 @@ function init() {
 
     // Add Earth's moon
     createMoon(planets);
+    
+    // Update cached raycast targets
+    updateRaycastTargets(sun, planets);
 
     // Initialize mobile controls
     mobileControls = initMobileControls();

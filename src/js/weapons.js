@@ -5,6 +5,9 @@ import { createExplosion } from './celestialBodies.js';
 export const MAX_LASERS = 20;
 export const MAX_FLASHES = 10;
 
+// Cached array of objects to test with raycaster
+let cachedObjectsToTest = [];
+
 // Ship type to laser color mapping
 const SHIP_LASER_COLORS = {
     'default': 0xff3333,         // Red for default ship
@@ -12,6 +15,23 @@ const SHIP_LASER_COLORS = {
     'Angel Ship': 0xffd700,      // Gold for Angel ship
     'Chris Ship': 0x3366cc       // Blue for Chris ship
 };
+
+// Function to update the cached raycast targets
+export function updateRaycastTargets(sun, planets) {
+    cachedObjectsToTest = [];
+    
+    // Include sun
+    if (sun) cachedObjectsToTest.push(sun);
+    
+    // Include planets and moons
+    if (planets && planets.length) {
+        planets.forEach(planet => {
+            cachedObjectsToTest.push(planet);
+            // Include moon if the planet has one
+            if (planet.moon) cachedObjectsToTest.push(planet.moon);
+        });
+    }
+}
 
 // Initialize weapon systems
 export function initWeapons(scene) {
@@ -133,21 +153,10 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         ignoreList.push(line);
     });
 
-    // OPTIMIZATION: Pre-filter scene objects to reduce raycast workload
-    // Only include objects that we actually want to test against
-    const objectsToTest = [];
+    // Create a copy of cached objects to test
+    const objectsToTest = [...cachedObjectsToTest];
     
-    // Include sun and planets explicitly (they're what we want to hit)
-    if (sun) objectsToTest.push(sun);
-    if (planets && planets.length) {
-        planets.forEach(planet => {
-            objectsToTest.push(planet);
-            // Include moon if the planet has one
-            if (planet.moon) objectsToTest.push(planet.moon);
-        });
-    }
-    
-    // Add remote players
+    // Add remote players (these change frequently so we add them each time)
     if (remotePlayersRef) {
         Object.values(remotePlayersRef).forEach(player => {
             objectsToTest.push(player);
