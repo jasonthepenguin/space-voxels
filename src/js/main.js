@@ -18,6 +18,15 @@ import {
     isBoostActive
 } from './mobileControls.js';
 
+// Import chat system
+import {
+    initChat,
+    showChat,
+    hideChat,
+    setUsername,
+    isChatInputActive
+} from './chat.js';
+
 // Import modules
 import { 
     celestialColors, 
@@ -241,6 +250,11 @@ function init() {
     socket = networkingData.socket;
     playerId = networkingData.playerId;
     isConnected = networkingData.isConnected;
+
+    // Initialize chat system with socket but only for desktop
+    if (!isMobile) {
+        initChat(socket, `Player_${playerId?.substring(0, 5) || Math.floor(Math.random() * 10000)}`);
+    }
 
     // Register pointer lock callback if needed
     registerPointerLockCallback((isLocked) => {
@@ -490,9 +504,14 @@ function startGame() {
     // Set player reference in networking module
     setPlayerReference(player, updateCameraPosition);
     
-    // Show mobile controls if on mobile
+    // Show mobile controls if on mobile, otherwise show chat for desktop
     if (isMobile) {
         showMobileControls();
+        // Ensure chat is hidden for mobile users
+        hideChat();
+    } else {
+        // Always show chat for desktop users
+        showChat();
     }
     
     sendPlayerReady(socket, isConnected, selectedShipType);
@@ -522,9 +541,11 @@ function resetGame() {
     });
     lasers = [];
     
-    // Hide mobile controls if on mobile
+    // Hide mobile controls if on mobile, otherwise hide chat for desktop
     if (isMobile) {
         hideMobileControls();
+    } else {
+        hideChat();
     }
     
     // Notify server that player has left game mode

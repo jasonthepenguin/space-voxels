@@ -1,4 +1,5 @@
 // Desktop Controls Module
+import { activateChat, isChatInputActive } from './chat.js';
 
 const keyboard = {};
 let leftMouseHeld = false;
@@ -21,6 +22,16 @@ export function initDesktopControls() {
 function handleKeyDown(event) {
     keyboard[event.code] = true;
 
+    // Handle T key press for chat activation
+    if (event.code === 'KeyT' && !isChatInputActive()) {
+        // Only activate chat if we're in game
+        const uiManager = window.uiManager;
+        if (uiManager && uiManager.isPlaying()) {
+            activateChat();
+            event.preventDefault();
+        }
+    }
+
     if (event.code === 'Escape') {
         event.preventDefault();
     }
@@ -31,16 +42,29 @@ function handleKeyUp(event) {
 }
 
 function handleMouseDown(event) {
+    // Ignore mouse events when chat is active
+    if (isChatInputActive()) return;
+    
     if (event.button === 0) leftMouseHeld = true;
     if (event.button === 2) rightMouseHeld = true;
 }
 
 function handleMouseUp(event) {
+    // Ignore mouse events when chat is active
+    if (isChatInputActive()) return;
+    
     if (event.button === 0) leftMouseHeld = false;
     if (event.button === 2) rightMouseHeld = false;
 }
 
 function handleMouseMove(event) {
+    // Ignore mouse movement when chat is active
+    if (isChatInputActive()) {
+        mouseMoveX = 0;
+        mouseMoveY = 0;
+        return;
+    }
+    
     // Only track mouse movement when pointer is locked
     if (document.pointerLockElement === document.body || 
         document.mozPointerLockElement === document.body ||
@@ -56,18 +80,32 @@ function handleMouseMove(event) {
 }
 
 export function isKeyPressed(keyCode) {
+    // Ignore key presses when chat is active
+    if (isChatInputActive()) return false;
+    
     return !!keyboard[keyCode];
 }
 
 export function isLeftMouseHeld() {
+    // Ignore mouse input when chat is active
+    if (isChatInputActive()) return false;
+    
     return leftMouseHeld;
 }
 
 export function isRightMouseHeld() {
+    // Ignore mouse input when chat is active
+    if (isChatInputActive()) return false;
+    
     return rightMouseHeld;
 }
 
 export function getMouseMovement() {
+    // Ignore mouse movement when chat is active
+    if (isChatInputActive()) {
+        return { x: 0, y: 0 };
+    }
+    
     const movement = { x: mouseMoveX, y: mouseMoveY };
     // Reset after reading to prevent continuous movement
     mouseMoveX = 0;

@@ -522,4 +522,94 @@ canvas {
 @keyframes flash-fade {
     0% { opacity: 0.7; }
     100% { opacity: 0; }
+}
+
+/* Chat System Styles */
+#chat-container {
+    position: absolute;
+    left: 10px;
+    bottom: 120px;
+    width: 300px;
+    max-height: 200px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 5px;
+    color: white;
+    display: none; /* Initially hidden until initialized */
+    flex-direction: column;
+    z-index: 100;
+    font-size: 14px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+#chat-messages {
+    padding: 10px;
+    overflow-y: auto;
+    max-height: 150px;
+    word-wrap: break-word;
+    min-height: 100px; /* Ensure minimum height even when empty */
+}
+
+#chat-messages:empty::before {
+    content: 'No messages yet. Press T to chat...';
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    display: block;
+    text-align: center;
+    margin-top: 40px;
+}
+
+.chat-message {
+    margin-bottom: 5px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-username {
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.chat-content {
+    color: #ffffff;
+}
+
+#chat-input-container {
+    padding: 5px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#chat-input {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    color: white;
+    padding: 5px;
+    font-size: 14px;
+    display: none; /* Hidden by default until T is pressed */
+}
+
+#chat-input:focus {
+    outline: none;
+    border-color: rgba(76, 175, 80, 0.8);
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+/* Visual indication when chat is active */
+.chat-active {
+    border: 2px solid rgba(76, 175, 80, 0.8) !important;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.4) !important;
+}
+
+.chat-active #chat-input-container {
+    background-color: rgba(76, 175, 80, 0.1);
 } 

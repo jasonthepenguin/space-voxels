@@ -1,5 +1,6 @@
 // UI Manager with State Machine Pattern
 import * as THREE from 'three';
+import { hideChat, showChat } from './chat.js';
 
 // Game States
 export const GameState = {
@@ -125,6 +126,11 @@ class UIManager {
                 if (this.mobileControlsElement) {
                     this.mobileControlsElement.style.display = 'none';
                 }
+                
+                // Hide chat when returning to main menu
+                if (!this.isMobile) {
+                    hideChat();
+                }
                 break;
                 
             case GameState.SHIP_SELECTOR:
@@ -138,6 +144,11 @@ class UIManager {
                 if (this.mobileControlsElement) {
                     this.mobileControlsElement.style.display = 'none';
                 }
+                
+                // Hide chat in ship selector
+                if (!this.isMobile) {
+                    hideChat();
+                }
                 break;
                 
             case GameState.PLAYING:
@@ -147,6 +158,11 @@ class UIManager {
                 this.playersCounterElement.style.display = 'block';
                 if (this.resumeOverlayElement) {
                     this.resumeOverlayElement.style.display = 'none';
+                }
+                
+                // Only show chat for desktop users
+                if (!this.isMobile) {
+                    showChat();
                 }
                 
                 // Only request pointer lock on desktop
