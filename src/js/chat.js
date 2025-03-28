@@ -139,9 +139,14 @@ export function deactivateChat() {
  * Send a chat message
  */
 function sendMessage() {
-    if (!chatInputElement || !chatInputElement.value.trim()) return;
-    
+
     const message = chatInputElement.value.trim();
+
+    if(!message)
+    {
+        deactivateChat();
+        return;
+    }
     
     // Add message locally
     addMessage(chatUsername, message);
