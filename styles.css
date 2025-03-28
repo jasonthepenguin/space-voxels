@@ -1,9 +1,34 @@
 body { 
   margin: 0; 
   overflow: hidden; 
-  font-family: Arial, sans-serif;
+  font-family: 'Exo 2', Arial, sans-serif;
   touch-action: none;
+  background: linear-gradient(to bottom, #0B0B1A, #23233C);
+  position: relative;
 }
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 2px),
+    radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 1px),
+    radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 2px);
+  background-size: 550px 550px, 350px 350px, 250px 250px;
+  background-position: 0 0, 40px 60px, 130px 270px;
+  z-index: -1;
+  animation: starsAnimation 300s linear infinite;
+}
+
+@keyframes starsAnimation {
+  from { background-position: 0 0, 40px 60px, 130px 270px; }
+  to { background-position: 1000px 1000px, 1040px 1060px, 1130px 1270px; }
+}
+
 canvas { 
   display: block; 
 }
@@ -12,18 +37,68 @@ canvas {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.7);
+  background: linear-gradient(135deg, rgba(20, 30, 48, 0.9) 0%, rgba(36, 59, 85, 0.9) 100%);
   color: white;
-  padding: 20px;
-  border-radius: 5px;
+  padding: 25px;
+  border-radius: 10px;
   text-align: center;
   max-width: 90%;
   width: 400px;
   z-index: 100;
+  box-shadow: 0 0 30px rgba(0, 100, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  animation: glow 3s infinite alternate;
 }
+
+@keyframes glow {
+  from { box-shadow: 0 0 20px rgba(0, 100, 255, 0.3); }
+  to { box-shadow: 0 0 40px rgba(0, 100, 255, 0.6); }
+}
+
 #instructions.hidden {
   display: none;
 }
+
+#instructions h1 {
+  font-size: 36px;
+  margin-bottom: 20px;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 150, 255, 0.8);
+  letter-spacing: 2px;
+}
+
+#instructions p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+#instructions p:first-of-type {
+  font-size: 18px;
+  margin-top: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 15px;
+  margin-bottom: 15px;
+}
+
+/* Key styling for controls */
+.key {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin: 0 2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: monospace;
+  font-weight: bold;
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
 #resume-overlay {
   position: absolute;
   top: 0;
@@ -44,8 +119,8 @@ canvas {
 #resume-overlay h2, #resume-overlay p {
   margin: 10px;
 }
-#start-button {
-  background-color: #4CAF50;
+#start-button, #ship-builder-button, #return-button {
+  background: linear-gradient(to bottom, #3a8ffe, #194a9e);
   border: none;
   color: white;
   padding: 15px 32px;
@@ -53,30 +128,69 @@ canvas {
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
-  margin: 10px 2px;
+  margin: 15px 0;
   cursor: pointer;
-  border-radius: 5px;
-  transition: background-color 0.3s;
+  border-radius: 30px;
+  transition: all 0.3s;
+  width: 80%;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 1px;
+}
+#start-button:hover, #ship-builder-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 100, 255, 0.4);
+  background: linear-gradient(to bottom, #4a9fff, #2a5aae);
+}
+#start-button:active, #ship-builder-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+#start-button {
+  background: linear-gradient(to bottom, #4CAF50, #2E7D32);
 }
 #start-button:hover {
-  background-color: #45a049;
+  background: linear-gradient(to bottom, #5DBF61, #3E8D42);
 }
-#ship-builder-button {
-  background-color: #2196F3;
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 10px 2px;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: background-color 0.3s;
+#return-button {
+  background: linear-gradient(to bottom, #f44336, #c62828);
+  margin-top: 20px;
 }
-#ship-builder-button:hover {
-  background-color: #0b7dda;
+#return-button:hover {
+  background: linear-gradient(to bottom, #ff5546, #d63838);
+}
+/* Add button press effect */
+#start-button::after, #ship-builder-button::after, #return-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+#start-button:focus::after, #ship-builder-button:focus::after, #return-button:focus::after {
+  animation: ripple 1s ease-out;
+}
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
 }
 #crosshair {
   position: absolute;
@@ -131,21 +245,34 @@ canvas {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 30%;
   z-index: 90;
   display: none;
   touch-action: none;
 }
+
+.mobile-controls-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 20px 20px;
+}
+
+.mobile-controls-left, .mobile-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 #mobile-joystick-area {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
+  position: relative;
   width: 120px;
   height: 120px;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   touch-action: none;
 }
+
 #mobile-joystick {
   position: absolute;
   top: 50%;
@@ -157,23 +284,19 @@ canvas {
   transform: translate(-50%, -50%);
   touch-action: none;
 }
+
 #mobile-look-area {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
+  position: relative;
   width: 120px;
   height: 120px;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   touch-action: none;
 }
-#mobile-fire-button {
-  position: absolute;
-  bottom: 20px;
-  right: 160px;
+
+#mobile-fire-button, #mobile-boost-button {
   width: 70px;
   height: 70px;
-  background-color: rgba(255, 0, 0, 0.5);
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -183,39 +306,55 @@ canvas {
   touch-action: none;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.1s, background-color 0.1s;
+  position: relative;
 }
+
+#mobile-fire-button {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+#mobile-boost-button {
+  background-color: rgba(0, 191, 255, 0.5);
+}
+
+#mobile-fire-button::after, #mobile-boost-button::after {
+  position: absolute;
+  bottom: -20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  width: 100%;
+  text-align: center;
+}
+
 #mobile-fire-button::after {
   content: 'TAP';
-  font-size: 14px;
-  position: absolute;
-  bottom: -20px;
-  color: rgba(255, 255, 255, 0.7);
 }
-/* New boost button styling */
-#mobile-boost-button {
-  position: absolute;
-  bottom: 20px;
-  left: 160px;
-  width: 70px;
-  height: 70px;
-  background-color: rgba(0, 191, 255, 0.5);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  font-weight: bold;
-  touch-action: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s, background-color 0.1s;
-}
+
 #mobile-boost-button::after {
   content: 'HOLD';
-  font-size: 14px;
-  position: absolute;
-  bottom: -20px;
-  color: rgba(255, 255, 255, 0.7);
 }
+
+/* Media queries to adjust mobile controls for different screen sizes */
+@media (max-width: 600px) {
+  .mobile-controls-container {
+    padding: 10px 10px 15px;
+  }
+  
+  .mobile-controls-left, .mobile-controls-right {
+    gap: 10px;
+  }
+  
+  #mobile-joystick-area, #mobile-look-area {
+    width: 100px;
+    height: 100px;
+  }
+  
+  #mobile-fire-button, #mobile-boost-button {
+    width: 60px;
+    height: 60px;
+  }
+}
+
 /* Ship selector styles */
 .ship-option {
   width: 45%;
@@ -345,25 +484,6 @@ canvas {
   flex-wrap: wrap;
   justify-content: space-around;
   margin: 20px 0;
-}
-
-#return-button {
-  background-color: #f44336;
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 10px 2px;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-}
-
-#return-button:hover {
-  background-color: #d32f2f;
 }
 
 /* Add this to your styles.css file */
@@ -522,4 +642,119 @@ canvas {
 @keyframes flash-fade {
     0% { opacity: 0.7; }
     100% { opacity: 0; }
-} 
+}
+
+#chat-container {
+    position: absolute;
+    left: 10px;
+    bottom: 120px;
+    width: 300px;
+    max-height: 200px;
+    background: linear-gradient(135deg, rgba(20, 30, 48, 0.9), rgba(36, 59, 85, 0.9));
+    border-radius: 10px;
+    color: white;
+    display: none;
+    flex-direction: column;
+    z-index: 100;
+    font-size: 14px;
+    box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    transition: background-color 0.3s, border-color 0.3s;
+    animation: glow 3s infinite alternate;
+}
+
+#chat-messages {
+    padding: 10px;
+    overflow-y: auto;
+    max-height: 150px;
+    word-wrap: break-word;
+    min-height: 100px; /* Ensure minimum height even when empty */
+}
+
+#chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(0, 100, 255, 0.5);
+    border-radius: 10px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 100, 255, 0.7);
+}
+
+#chat-messages:empty::before {
+    content: 'No messages yet. Press T to chat...';
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+    display: block;
+    text-align: center;
+    margin-top: 40px;
+    animation: fadeIn 2s ease-in-out infinite alternate;
+}
+
+.chat-message {
+    margin-bottom: 5px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-username {
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.chat-content {
+    color: #ffffff;
+}
+
+#chat-input-container {
+    padding: 5px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#chat-input {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    color: white;
+    padding: 5px;
+    font-size: 14px;
+    display: none; /* Hidden by default until T is pressed */
+}
+
+#chat-input:focus {
+    outline: none;
+    border-color: rgba(76, 175, 80, 0.8);
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+/* Visual indication when chat is active */
+.chat-active {
+    border: 2px solid rgba(76, 175, 80, 0.8) !important;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.4) !important;
+}
+
+.chat-active #chat-input-container {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0.6; }
+    to { opacity: 1; }
+}

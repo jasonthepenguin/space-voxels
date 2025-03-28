@@ -15,10 +15,11 @@
     <br>
     <button id="ship-builder-button">Ship Selector</button>
     <p>Controls:</p>
-    <p>WASD / Left Joystick: Move the player</p>
-    <p>Mouse / Right Area: Rotate the player</p>
-    <p>Left Mouse / Fire Button: Shoot (tap to fire)</p>
-    <p>Shift / Boost Button: Temporary speed boost</p>
+    <p><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> / Left Joystick: Move the player</p>
+    <p><span class="key">Mouse</span> / Right Area: Rotate the player</p>
+    <p><span class="key">Left Click</span> / Fire Button: Shoot (tap to fire)</p>
+    <p><span class="key">Shift</span> / Boost Button: Temporary speed boost</p>
+    <p><span class="key">T</span>: Open chat (desktop only)</p>
   </div>
   
   <!-- Ship Selector UI -->
@@ -59,19 +60,35 @@
   <div id="fps-counter">FPS: 0</div>
   <div id="players-counter">Players Online: 1</div>
   
+  <!-- Chat UI for desktop -->
+  <div id="chat-container">
+    <div id="chat-messages"></div>
+    <div id="chat-input-container">
+      <input type="text" id="chat-input" placeholder="Press T to chat..." maxlength="100">
+    </div>
+  </div>
+  
   <!-- Resume overlay -->
   <div id="resume-overlay">
     <h2>Click to Resume</h2>
     <p>Click anywhere to resume the game</p>
   </div>
   
-  <!-- Mobile controls -->
+  <!-- Mobile controls with flexbox layout -->
   <div id="mobile-controls">
-    <div id="mobile-joystick-area">
-      <div id="mobile-joystick"></div>
+    <div class="mobile-controls-container">
+      <div class="mobile-controls-left">
+        <div id="mobile-joystick-area">
+          <div id="mobile-joystick"></div>
+        </div>
+        <div id="mobile-boost-button">BOOST</div>
+      </div>
+      
+      <div class="mobile-controls-right">
+        <div id="mobile-fire-button">FIRE</div>
+        <div id="mobile-look-area"></div>
+      </div>
     </div>
-    <div id="mobile-look-area"></div>
-    <div id="mobile-fire-button">FIRE</div>
   </div>
   
   <script type="module" src="./src/js/main.js"></script>
