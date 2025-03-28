@@ -74,13 +74,21 @@
     <p>Click anywhere to resume the game</p>
   </div>
   
-  <!-- Mobile controls -->
+  <!-- Mobile controls with flexbox layout -->
   <div id="mobile-controls">
-    <div id="mobile-joystick-area">
-      <div id="mobile-joystick"></div>
+    <div class="mobile-controls-container">
+      <div class="mobile-controls-left">
+        <div id="mobile-joystick-area">
+          <div id="mobile-joystick"></div>
+        </div>
+        <div id="mobile-boost-button">BOOST</div>
+      </div>
+      
+      <div class="mobile-controls-right">
+        <div id="mobile-fire-button">FIRE</div>
+        <div id="mobile-look-area"></div>
+      </div>
     </div>
-    <div id="mobile-look-area"></div>
-    <div id="mobile-fire-button">FIRE</div>
   </div>
   
   <script type="module" src="./src/js/main.js"></script>

@@ -25,8 +25,6 @@ let joystick;
 let lookArea;
 let fireButton;
 let boostButton;
-let resetButton;
-
 
 export function isFireButtonHeld() {
     return fireButtonHeld;
@@ -47,17 +45,12 @@ export function initMobileControls() {
     joystick = document.getElementById('mobile-joystick');
     lookArea = document.getElementById('mobile-look-area');
     fireButton = document.getElementById('mobile-fire-button');
+    boostButton = document.getElementById('mobile-boost-button');
     
-    if (!mobileControls || !joystickArea || !joystick || !lookArea || !fireButton) {
+    if (!mobileControls || !joystickArea || !joystick || !lookArea || !fireButton || !boostButton) {
         console.error('Mobile control elements not found');
         return;
     }
-    
-    // Create boost button
-    boostButton = document.createElement('div');
-    boostButton.id = 'mobile-boost-button';
-    boostButton.textContent = 'BOOST';
-    mobileControls.appendChild(boostButton);
     
     // Setup event listeners for mobile controls
     setupMobileEventListeners();

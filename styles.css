@@ -245,21 +245,34 @@ canvas {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 30%;
   z-index: 90;
   display: none;
   touch-action: none;
 }
+
+.mobile-controls-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 20px 20px;
+}
+
+.mobile-controls-left, .mobile-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 #mobile-joystick-area {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
+  position: relative;
   width: 120px;
   height: 120px;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   touch-action: none;
 }
+
 #mobile-joystick {
   position: absolute;
   top: 50%;
@@ -271,23 +284,19 @@ canvas {
   transform: translate(-50%, -50%);
   touch-action: none;
 }
+
 #mobile-look-area {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
+  position: relative;
   width: 120px;
   height: 120px;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   touch-action: none;
 }
-#mobile-fire-button {
-  position: absolute;
-  bottom: 20px;
-  right: 160px;
+
+#mobile-fire-button, #mobile-boost-button {
   width: 70px;
   height: 70px;
-  background-color: rgba(255, 0, 0, 0.5);
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -297,39 +306,55 @@ canvas {
   touch-action: none;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.1s, background-color 0.1s;
+  position: relative;
 }
+
+#mobile-fire-button {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+#mobile-boost-button {
+  background-color: rgba(0, 191, 255, 0.5);
+}
+
+#mobile-fire-button::after, #mobile-boost-button::after {
+  position: absolute;
+  bottom: -20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  width: 100%;
+  text-align: center;
+}
+
 #mobile-fire-button::after {
   content: 'TAP';
-  font-size: 14px;
-  position: absolute;
-  bottom: -20px;
-  color: rgba(255, 255, 255, 0.7);
 }
-/* New boost button styling */
-#mobile-boost-button {
-  position: absolute;
-  bottom: 20px;
-  left: 160px;
-  width: 70px;
-  height: 70px;
-  background-color: rgba(0, 191, 255, 0.5);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  font-weight: bold;
-  touch-action: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s, background-color 0.1s;
-}
+
 #mobile-boost-button::after {
   content: 'HOLD';
-  font-size: 14px;
-  position: absolute;
-  bottom: -20px;
-  color: rgba(255, 255, 255, 0.7);
 }
+
+/* Media queries to adjust mobile controls for different screen sizes */
+@media (max-width: 600px) {
+  .mobile-controls-container {
+    padding: 10px 10px 15px;
+  }
+  
+  .mobile-controls-left, .mobile-controls-right {
+    gap: 10px;
+  }
+  
+  #mobile-joystick-area, #mobile-look-area {
+    width: 100px;
+    height: 100px;
+  }
+  
+  #mobile-fire-button, #mobile-boost-button {
+    width: 60px;
+    height: 60px;
+  }
+}
+
 /* Ship selector styles */
 .ship-option {
   width: 45%;
