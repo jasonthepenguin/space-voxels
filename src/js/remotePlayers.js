@@ -125,7 +125,7 @@ export function respawnLocalPlayer(player, scene, updateCameraPosition, socket, 
     
     // Notify server of new position
     if (socket && isConnected) {
-        socket.emit('updatePosition', {
+        socket.volatile.emit('updatePosition', {
             position: {
                 x: player.position.x,
                 y: player.position.y,
