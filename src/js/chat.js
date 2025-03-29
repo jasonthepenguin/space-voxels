@@ -14,6 +14,10 @@ let chatContainer = null;
 let chatMessagesElement = null;
 let chatInputElement = null;
 
+// Spam protection
+let lastChatTime = 0;
+const CHAT_COOLDOWN_MS = 1000; // Match server cooldown
+
 /**
  * Initialize the chat system
  * @param {Object} socketInstance - Socket.io instance for sending messages
@@ -139,6 +143,13 @@ export function deactivateChat() {
  * Send a chat message
  */
 function sendMessage() {
+
+    const now = Date.now();
+    if (now - lastChatTime < CHAT_COOLDOWN_MS) {
+        console.log('Client-side chat cooldown active.');
+        return;
+    }
+
 
     const message = chatInputElement.value.trim();
 

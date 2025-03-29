@@ -11,11 +11,21 @@
 <body>
   <!-- Username Input Screen -->
   <div id="username-input-screen">
-    <h1>Enter Your Name</h1>
+    <div class="game-branding">
+      <h1>🌀 Space Voxels</h1>
+    </div>
+    
     <input type="text" id="username-input" placeholder="Username (max 10 chars)" maxlength="10">
     <p id="username-error" class="error-message"></p>
     <button id="username-submit-button">Confirm</button>
     <p class="input-rules">Alphanumeric only, no spaces.</p>
+    <div class="creator-info">
+      <p>Created with ❤️ by</p>
+      <a href="https://x.com/JasonBotterill3" target="_blank" rel="noopener noreferrer">
+        <img src="./src/assets/textures/JB.jpg" alt="Creator Profile Picture" class="creator-pfp">
+        <span>Jason Botterill</span>
+      </a>
+    </div>
   </div>
 
   <div id="instructions" style="display: none;">
@@ -29,6 +39,10 @@
     <p><span class="key">Left Click</span> / Fire Button: Shoot (tap to fire)</p>
     <p><span class="key">Shift</span> / Boost Button: Temporary speed boost</p>
     <p><span class="key">T</span>: Open chat (desktop only)</p>
+    
+    <div class="credits-section">
+      <p class="version">Version 1.0</p>
+    </div>
   </div>
   
   <!-- Ship Selector UI -->
