@@ -130,6 +130,51 @@ canvas {
   margin-top: 15px;
 }
 
+/* Creator Info Styles */
+.creator-info {
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.creator-info p {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.creator-info a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.creator-info a:hover {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+  transform: translateY(-2px);
+}
+
+.creator-pfp {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.creator-info a:hover .creator-pfp {
+  border-color: #4CAF50;
+  transform: scale(1.1);
+}
+
 #instructions {
   position: absolute;
   top: 50%;
@@ -864,4 +909,73 @@ canvas {
   25% { transform: translateX(-5px); }
   50% { transform: translateX(5px); }
   75% { transform: translateX(-5px); }
+}
+
+/* Add styling for credits section */
+.credits-section {
+  margin-top: 30px;
+  padding-top: 15px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+
+
+.credits-section a {
+  display: none;
+}
+
+.version {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Keep styling for branding section in username screen */
+.game-branding {
+  margin-bottom: 25px;
+}
+
+.game-branding h1 {
+  margin-bottom: 5px;
+}
+
+.byline {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+  margin: 0 0 15px 0;
+}
+
+/* Override general link hiding for username screen specifically */
+#username-input-screen .byline a {
+  color: rgba(76, 175, 80, 0.9);
+  text-decoration: none;
+  transition: all 0.3s;
+  position: relative;
+  display: inline-block; /* Ensure links display in the username screen */
+}
+
+#username-input-screen .byline a:hover {
+  color: #4CAF50;
+}
+
+#username-input-screen .byline a::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  bottom: -2px;
+  left: 0;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+
+#username-input-screen .byline a:hover::after {
+  transform: scaleX(1);
+}
+
+/* Ensure creator info links are visible in username screen */
+.creator-info a {
+  display: flex; /* Override the general hiding of links in credits */
 }
