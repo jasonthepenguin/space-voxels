@@ -251,11 +251,6 @@ function init() {
     playerId = networkingData.playerId;
     isConnected = networkingData.isConnected;
 
-    // Initialize chat system with socket but only for desktop
-    if (!isMobile) {
-        initChat(socket, `Player_${playerId?.substring(0, 5) || Math.floor(Math.random() * 10000)}`);
-    }
-
     // Register pointer lock callback if needed
     registerPointerLockCallback((isLocked) => {
         cursorLocked = isLocked;
@@ -481,7 +476,7 @@ function handleAutoFire(currentTime) {
 }
 
 // New function to start the game
-function startGame() {
+function startGame(username) {
     gameStarted = true;
     
     // Resume audio context on user interaction
@@ -510,7 +505,8 @@ function startGame() {
         // Ensure chat is hidden for mobile users
         hideChat();
     } else {
-        // Always show chat for desktop users
+        // Initialize and show chat for desktop users with the confirmed username
+        initChat(socket, username);
         showChat();
     }
     

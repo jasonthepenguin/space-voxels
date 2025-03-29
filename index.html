@@ -9,7 +9,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="instructions">
+  <!-- Username Input Screen -->
+  <div id="username-input-screen">
+    <h1>Enter Your Name</h1>
+    <input type="text" id="username-input" placeholder="Username (max 10 chars)" maxlength="10">
+    <p id="username-error" class="error-message"></p>
+    <button id="username-submit-button">Confirm</button>
+    <p class="input-rules">Alphanumeric only, no spaces.</p>
+  </div>
+
+  <div id="instructions" style="display: none;">
     <h1>Space Voxels</h1>
     <button id="start-button">Start Game</button>
     <br>

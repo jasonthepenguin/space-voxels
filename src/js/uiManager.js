@@ -4,6 +4,7 @@ import { hideChat, showChat } from './chat.js';
 
 // Game States
 export const GameState = {
+    USERNAME_INPUT: 'USERNAME_INPUT',
     MAIN_MENU: 'MAIN_MENU',
     SHIP_SELECTOR: 'SHIP_SELECTOR',
     PLAYING: 'PLAYING'
@@ -12,12 +13,19 @@ export const GameState = {
 class UIManager {
     constructor() {
         // Current game state
-        this.currentState = GameState.MAIN_MENU;
+        this.currentState = GameState.USERNAME_INPUT;
+        
+        // Player username
+        this.username = '';
         
         // Selected ship (default to the first ship)
         this.selectedShip = 'default';
         
         // UI Elements
+        this.usernameInputScreenElement = document.getElementById('username-input-screen');
+        this.usernameInputElement = document.getElementById('username-input');
+        this.usernameErrorElement = document.getElementById('username-error');
+        this.usernameSubmitButton = document.getElementById('username-submit-button');
         this.instructionsElement = document.getElementById('instructions');
         this.shipSelectorElement = document.getElementById('ship-builder-ui');
         this.crosshairElement = document.getElementById('crosshair');
@@ -70,7 +78,7 @@ class UIManager {
         window.threeCamera = camera;
         
         // Set initial UI state
-        this.changeState(GameState.MAIN_MENU);
+        this.changeState(this.currentState);
         
         // Apply mobile-specific adjustments
         if (this.isMobile) {
@@ -113,8 +121,24 @@ class UIManager {
         const prevState = this.currentState;
         this.currentState = newState;
         
+        // Hide all major UI sections first
+        this.usernameInputScreenElement.style.display = 'none';
+        this.instructionsElement.style.display = 'none';
+        this.shipSelectorElement.style.display = 'none';
+        this.crosshairElement.style.display = 'none';
+        this.playersCounterElement.style.display = 'none';
+        if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
+        if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
+        if (!this.isMobile) hideChat(); // Hide chat by default
+        
         // Handle UI changes based on state transition
         switch (newState) {
+            case GameState.USERNAME_INPUT:
+                this.usernameInputScreenElement.style.display = 'block';
+                // Ensure chat is hidden
+                if (!this.isMobile) hideChat();
+                break;
+                
             case GameState.MAIN_MENU:
                 this.instructionsElement.style.display = 'block';
                 this.shipSelectorElement.style.display = 'none';
@@ -174,8 +198,8 @@ class UIManager {
                 }
                 
                 // Call the game start callback
-                if (this.gameStartCallback && prevState === GameState.MAIN_MENU) {
-                    this.gameStartCallback();
+                if (this.gameStartCallback && (prevState === GameState.MAIN_MENU || prevState === GameState.USERNAME_INPUT)) {
+                    this.gameStartCallback(this.username); // Pass username
                 }
                 break;
         }
@@ -188,6 +212,17 @@ class UIManager {
         // Start button
         this.startButton.addEventListener('click', () => {
             this.changeState(GameState.PLAYING);
+        });
+        
+        // Username Submit button
+        this.usernameSubmitButton.addEventListener('click', () => {
+            this.validateAndSetUsername();
+        });
+        // Also allow submitting with Enter key
+        this.usernameInputElement.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                this.validateAndSetUsername();
+            }
         });
         
         // Ship selector button
@@ -325,14 +360,13 @@ class UIManager {
     handlePointerLockChange() {
         if (!this.resumeOverlayElement || this.isMobile) return; // safety check or skip on mobile
     
-        if (document.pointerLockElement === document.body) {
+        // Only show overlay if pointer lock is lost during PLAYING state
+        if (document.pointerLockElement !== document.body && this.currentState === GameState.PLAYING) {
+            console.log("⚠️ Pointer lock lost or failed.");
+            this.resumeOverlayElement.style.display = 'flex';
+        } else if (document.pointerLockElement === document.body) {
             console.log("✅ Pointer lock re-engaged successfully.");
             this.resumeOverlayElement.style.display = 'none';
-        } else {
-            console.log("⚠️ Pointer lock lost or failed.");
-            if (this.currentState === GameState.PLAYING) {
-                this.resumeOverlayElement.style.display = 'flex';
-            }
         }
     }
     
@@ -530,6 +564,50 @@ class UIManager {
                 line.parentNode.removeChild(line);
             }
         }, 500);
+    }
+    
+    // Validate and set username
+    validateAndSetUsername() {
+        const username = this.usernameInputElement.value.trim();
+        const errorElement = this.usernameErrorElement;
+        const inputElement = this.usernameInputElement;
+        const regex = /^[a-zA-Z0-9]+$/; // Alphanumeric only
+
+        errorElement.textContent = ''; // Clear previous errors
+        inputElement.style.borderColor = 'rgba(255, 255, 255, 0.3)'; // Reset border
+        inputElement.style.animation = ''; // Clear shake animation
+
+        if (!username) {
+            errorElement.textContent = 'Username cannot be empty.';
+            inputElement.style.borderColor = '#ff6b6b';
+            inputElement.style.animation = 'shake 0.5s ease-in-out';
+            return;
+        }
+
+        if (username.length > 10) {
+            // Should be prevented by maxlength, but good to double check
+            errorElement.textContent = 'Username must be 10 characters or less.';
+            inputElement.style.borderColor = '#ff6b6b';
+            inputElement.style.animation = 'shake 0.5s ease-in-out';
+            return;
+        }
+
+        if (!regex.test(username)) {
+            errorElement.textContent = 'Only letters and numbers allowed.';
+            inputElement.style.borderColor = '#ff6b6b';
+            inputElement.style.animation = 'shake 0.5s ease-in-out';
+            return;
+        }
+
+        // Validation passed
+        this.username = username;
+        console.log(`Username set to: ${this.username}`);
+        this.changeState(GameState.MAIN_MENU);
+    }
+    
+    // Get the stored username
+    getUsername() {
+        return this.username;
     }
 }
 
