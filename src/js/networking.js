@@ -1,5 +1,9 @@
 import { io } from 'socket.io-client';
 
+
+const MAX_PLAYERS = 50;
+let serverFull = false;
+
 import {
     addOrUpdateRemotePlayer,
     removeRemotePlayer,
@@ -66,6 +70,17 @@ export function initNetworking(updatePlayerCount, gameScene) {
         respawnAllCelestialBodies(scene);
         console.log('Received planet respawn event from server.');
     });
+
+
+    socket.on('serverFull', (data) => {
+        serverFull = true;
+        alert(data.message || "Server is full.");
+        socket.disconnect();
+
+        if (window.uiManager) {
+            window.uiManager.showServerFullError();
+        }
+    });
     
     // Updated event handler for player hit using imported functions
     socket.on('playerHit', (data) => {
@@ -109,5 +124,5 @@ export function sendPlayerNotReady(socket, isConnected) {
 
 export function updatePlayerCountUI(count) {
     const elem = document.getElementById('players-counter');
-    if (elem) elem.textContent = `Players Online: ${count}`;
+    if (elem) elem.textContent = `Players Online: ${count}/${MAX_PLAYERS}`;
 }

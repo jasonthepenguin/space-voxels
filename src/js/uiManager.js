@@ -609,6 +609,12 @@ class UIManager {
     getUsername() {
         return this.username;
     }
+
+    showServerFullError() {
+        this.usernameErrorElement.textContent = "Server is full. Please try again later. Sorry :(";
+        this.usernameInputElement.disabled = true;
+        this.usernameSubmitButton.disabled = true;
+    }
 }
 
 // Create and export a singleton instance
