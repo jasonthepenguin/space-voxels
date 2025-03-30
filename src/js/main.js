@@ -66,7 +66,9 @@ import {
     sendPlayerReady,
     sendPlayerNotReady,
     updatePlayerCountUI,
-    setPlayerReference
+    setPlayerReference,
+    requestRespawn,
+    isPlayerDead
 } from './networking.js';
 
 import {
@@ -168,6 +170,13 @@ window.resetGame = resetGame;
 
 // Replace soundPool and soundsLoaded variables with audioSystem
 let audioSystem;
+
+// Expose requestRespawn globally for UI Manager access
+window.requestRespawnFromServer = () => {
+    if (socket && isConnected) {
+        requestRespawn(socket, isConnected);
+    }
+};
 
 // Initialize the game
 function init() {
@@ -314,7 +323,7 @@ function animate() {
 
     const remotePlayers = getAllRemotePlayers();
 
-    if (uiManager.isPlaying() && player) {
+    if (uiManager.isPlaying() && player && !isPlayerDead()) {
         // Handle desktop look controls
         if (!isMobile) {
             const lookDelta = getMouseMovement();
@@ -401,7 +410,7 @@ function animate() {
         }
     }
 
-    // Interpolate remote players
+    // Always interpolate remote players, even if local player is dead
     for (const id in remotePlayers) {
         const remotePlayer = remotePlayers[id];
         if (remotePlayer.userData.targetPosition && remotePlayer.userData.targetRotation) {
@@ -454,7 +463,8 @@ function updateCameraPosition() {
 
 // Update this function to use the correct left mouse held status from desktop controls
 function handleAutoFire(currentTime) {
-    if (!player || !uiManager.isPlaying()) return;
+    // Don't allow firing if dead
+    if (!player || !uiManager.isPlaying() || isPlayerDead()) return;
 
     if ((isLeftMouseHeld() || (isMobile && isFireButtonHeld())) && (currentTime - lastShotTime >= FIRE_COOLDOWN)) {
         shootLaser(

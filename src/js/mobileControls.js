@@ -1,5 +1,6 @@
 // Mobile Controls Module
 import * as THREE from 'three';
+import { isPlayerDead } from './networking.js';
 
 // Constants
 const JOYSTICK_MAX_DISTANCE = 40; // Maximum distance joystick can move from center
@@ -246,7 +247,7 @@ export function hideMobileControls() {
 
 // Get joystick values for movement
 export function getJoystickValues() {
-    if (!moveJoystickActive || !mobileControlsActive) {
+    if (!moveJoystickActive || !mobileControlsActive || isPlayerDead()) {
         return { x: 0, y: 0 };
     }
     
@@ -269,7 +270,7 @@ export function getJoystickValues() {
 
 // Get look area delta values for camera rotation
 export function getLookDelta() {
-    if (!lookAreaActive || !mobileControlsActive) {
+    if (!lookAreaActive || !mobileControlsActive || isPlayerDead()) {
         return { x: 0, y: 0 };
     }
     

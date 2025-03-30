@@ -15,6 +15,7 @@ import { respawnAllCelestialBodies } from './celestialBodies.js';
 
 let scene; // scene reference
 let player = null; // reference to local player
+let playerIsDead = false; // Track player death state
 let updateCameraPositionFn = null; // reference to camera position update function
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
@@ -96,6 +97,33 @@ export function initNetworking(updatePlayerCount, gameScene) {
         }
     });
 
+    // New event handler for when the local player dies
+    socket.on('playerDied', () => {
+        console.log("Received playerDied event. Showing death screen.");
+        playerIsDead = true;
+        if (window.uiManager) {
+            window.uiManager.showDeathScreen();
+        }
+        // Optionally, you could also hide the player model here
+        if (player) {
+            player.visible = false;
+        }
+    });
+
+    // New event handler for respawning the player (triggered by server)
+    socket.on('respawnPlayer', (data) => {
+        console.log("Received respawnPlayer event with position:", data.position);
+        if (player && playerIsDead) {
+            respawnLocalPlayer(player, scene, updateCameraPositionFn, data.position, true);
+            playerIsDead = false;
+            if (window.uiManager) {
+                window.uiManager.hideDeathScreen();
+            }
+        } else {
+            console.log("Respawn requested but player is not dead or doesn't exist.");
+        }
+    });
+
     // Add a heartbeat mechanism to verify connectivity
     setInterval(() => {
         if (socket && socket.connected) {
@@ -125,4 +153,19 @@ export function sendPlayerNotReady(socket, isConnected) {
 export function updatePlayerCountUI(count) {
     const elem = document.getElementById('players-counter');
     if (elem) elem.textContent = `Players Online: ${count}/${MAX_PLAYERS}`;
+}
+
+// New function to request respawn from server
+export function requestRespawn(socket, isConnected) {
+    if (isConnected && playerIsDead) {
+        console.log("Requesting respawn from server...");
+        socket.emit('requestRespawn');
+    } else {
+        console.log("Cannot request respawn: Not connected or not dead.");
+    }
+}
+
+// Function to get player death state
+export function isPlayerDead() {
+    return playerIsDead;
 }

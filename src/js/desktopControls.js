@@ -1,5 +1,6 @@
 // Desktop Controls Module
 import { activateChat, isChatInputActive } from './chat.js';
+import { isPlayerDead } from './networking.js';
 
 const keyboard = {};
 let leftMouseHeld = false;
@@ -80,29 +81,29 @@ function handleMouseMove(event) {
 }
 
 export function isKeyPressed(keyCode) {
-    // Ignore key presses when chat is active
-    if (isChatInputActive()) return false;
+    // Ignore key presses when chat is active or player is dead
+    if (isChatInputActive() || isPlayerDead()) return false;
     
     return !!keyboard[keyCode];
 }
 
 export function isLeftMouseHeld() {
-    // Ignore mouse input when chat is active
-    if (isChatInputActive()) return false;
+    // Ignore mouse input when chat is active or player is dead
+    if (isChatInputActive() || isPlayerDead()) return false;
     
     return leftMouseHeld;
 }
 
 export function isRightMouseHeld() {
-    // Ignore mouse input when chat is active
-    if (isChatInputActive()) return false;
+    // Ignore mouse input when chat is active or player is dead
+    if (isChatInputActive() || isPlayerDead()) return false;
     
     return rightMouseHeld;
 }
 
 export function getMouseMovement() {
-    // Ignore mouse movement when chat is active
-    if (isChatInputActive()) {
+    // Ignore mouse movement when chat is active or player is dead
+    if (isChatInputActive() || isPlayerDead()) {
         return { x: 0, y: 0 };
     }
     

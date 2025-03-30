@@ -71,7 +71,7 @@ export function getAllRemotePlayers() {
 }
 
 // function to respawn the local player
-export function respawnLocalPlayer(player, scene, updateCameraPosition, socket, isConnected) {
+export function respawnLocalPlayer(player, scene, updateCameraPosition, respawnPosition, isConnected) {
     console.log("Respawning local player...");
     
     if (!player) {
@@ -79,12 +79,8 @@ export function respawnLocalPlayer(player, scene, updateCameraPosition, socket, 
         return;
     }
     
-    // Generate a random respawn position
-    const respawnPosition = {
-        x: Math.random() * 100 - 50,
-        y: Math.random() * 50 + 10,
-        z: Math.random() * 100 - 50
-    };
+    // Use the position provided by the server
+    console.log("Using server-provided respawn position:", respawnPosition);
     
     // Create a respawn explosion effect
     const explosionGeometry = new THREE.SphereGeometry(2, 16, 16);
@@ -114,30 +110,14 @@ export function respawnLocalPlayer(player, scene, updateCameraPosition, socket, 
     
     expandExplosion();
     
-    // Teleport player to new position
-    player.position.set(respawnPosition.x, respawnPosition.y, respawnPosition.z);
-    
     // Reset rotation
     player.rotation.set(0, 0, 0);
     
+    // Make player visible again
+    player.visible = true;
+    
     // Update camera position immediately
     updateCameraPosition();
-    
-    // Notify server of new position
-    if (socket && isConnected) {
-        socket.volatile.emit('updatePosition', {
-            position: {
-                x: player.position.x,
-                y: player.position.y,
-                z: player.position.z
-            },
-            rotation: {
-                x: player.rotation.x,
-                y: player.rotation.y,
-                z: player.rotation.z
-            }
-        });
-    }
     
     console.log("Local player respawned at", respawnPosition);
 }

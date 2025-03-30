@@ -380,20 +380,15 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         
         // If we hit a remote player, send a hit event to the server
         if (hitRemotePlayer && socket) {
-            console.log(`Sending playerHit event for player: ${hitRemotePlayer}`);
+            console.log(`Sending playerDied event for player: ${hitRemotePlayer}`);
             
             // Show elimination message
             if (window.uiManager) {
                 window.uiManager.showEliminationMessage(100);
             }
             
-            socket.emit('playerHit', { 
-                targetId: hitRemotePlayer,
-                position: {
-                    x: Math.random() * 100 - 50,
-                    y: Math.random() * 50 + 10,
-                    z: Math.random() * 100 - 50
-                }
+            socket.emit('playerDied', { 
+                targetId: hitRemotePlayer
             });
         }
         
