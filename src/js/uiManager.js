@@ -7,7 +7,8 @@ export const GameState = {
     USERNAME_INPUT: 'USERNAME_INPUT',
     MAIN_MENU: 'MAIN_MENU',
     SHIP_SELECTOR: 'SHIP_SELECTOR',
-    PLAYING: 'PLAYING'
+    PLAYING: 'PLAYING',
+    DEAD: 'DEAD'
 };
 
 class UIManager {
@@ -33,11 +34,13 @@ class UIManager {
         this.playersCounterElement = document.getElementById('players-counter');
         this.resumeOverlayElement = document.getElementById('resume-overlay');
         this.mobileControlsElement = document.getElementById('mobile-controls');
+        this.deathScreenElement = document.getElementById('death-screen');
         
         // Buttons
         this.startButton = document.getElementById('start-button');
         this.shipSelectorButton = document.getElementById('ship-builder-button');
         this.returnButton = document.getElementById('return-button');
+        this.respawnButton = document.getElementById('respawn-button');
         
         // Game references
         this.camera = null;
@@ -129,6 +132,7 @@ class UIManager {
         this.playersCounterElement.style.display = 'none';
         if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
         if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
+        if (this.deathScreenElement) this.deathScreenElement.style.display = 'none';
         if (!this.isMobile) hideChat(); // Hide chat by default
         
         // Handle UI changes based on state transition
@@ -200,6 +204,23 @@ class UIManager {
                 // Call the game start callback
                 if (this.gameStartCallback && (prevState === GameState.MAIN_MENU || prevState === GameState.USERNAME_INPUT)) {
                     this.gameStartCallback(this.username); // Pass username
+                }
+                break;
+                
+            case GameState.DEAD:
+                this.instructionsElement.style.display = 'none';
+                this.shipSelectorElement.style.display = 'none';
+                this.crosshairElement.style.display = 'none';
+                this.playersCounterElement.style.display = 'none';
+                if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
+                if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
+                if (!this.isMobile) hideChat();
+                if (this.deathScreenElement) this.deathScreenElement.style.display = 'flex';
+                
+                // Release pointer lock if active (desktop)
+                if (!this.isMobile && document.pointerLockElement)
+                {
+                    document.exitPointerLock();
                 }
                 break;
         }
@@ -298,6 +319,20 @@ class UIManager {
             }
             
             this.selectedShip = 'default';
+        }
+        
+        // Respawn button listener
+        if (this.respawnButton) {
+            this.respawnButton.addEventListener('click', () => {
+                // Logic to request respawn from server will be called here
+                // We'll add the actual call later in main.js or wherever socket is accessible
+                console.log("Respawn button clicked");
+                if (window.requestRespawnFromServer) {
+                    window.requestRespawnFromServer();
+                } else {
+                    console.error("requestRespawnFromServer function not found on window");
+                }
+            });
         }
         
         // Resume overlay click
@@ -614,6 +649,19 @@ class UIManager {
         this.usernameErrorElement.textContent = "Server is full. Please try again later. Sorry :(";
         this.usernameInputElement.disabled = true;
         this.usernameSubmitButton.disabled = true;
+    }
+
+    // Show the death screen
+    showDeathScreen() {
+        this.changeState(GameState.DEAD);
+    }
+
+    // Hide the death screen
+    hideDeathScreen() {
+        if (this.currentState === GameState.DEAD) {
+            // Transition back to PLAYING state after respawn
+            this.changeState(GameState.PLAYING);
+        }
     }
 }
 

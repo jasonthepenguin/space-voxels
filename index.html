@@ -121,6 +121,34 @@
     </div>
   </div>
   
+  <!-- Death Screen UI -->
+  <div id="death-screen">
+    <div class="death-screen-content">
+      <h1>YOU DIED</h1>
+      <div class="death-stats">
+        <p class="death-message">Better luck next time, retard!</p>
+        <div class="stat-container">
+          <div class="stat">
+            <span class="stat-label">Score</span>
+            <span class="stat-value" id="death-score">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Kills</span>
+            <span class="stat-value" id="death-kills">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Time Alive</span>
+            <span class="stat-value" id="death-time">0:00</span>
+          </div>
+        </div>
+      </div>
+      <button id="respawn-button">
+        <span class="button-text">RESPAWN</span>
+        <span class="button-icon">🚀</span>
+      </button>
+    </div>
+  </div>
+  
   <script type="module" src="./src/js/main.js"></script>
 </body>
 </html> 
