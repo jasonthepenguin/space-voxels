@@ -93,6 +93,7 @@ import skyboxBottomUrl from '../assets/textures/skybox_bottom.png';
 import skyboxFrontUrl from '../assets/textures/skybox_front.png';
 import skyboxBackUrl from '../assets/textures/skybox_back.png';
 import laserSoundUrl from '../assets/sounds/laser_sound_3.wav';
+import thrusterSoundUrl from '../assets/sounds/thruster.mp3';
 
 // Game state variables
 let scene, camera, renderer;
@@ -511,6 +512,8 @@ function startGame(username) {
     // Load sounds if not already loaded
     if (audioSystem && !audioSystem.isAudioInitialized) {
         audioSystem.loadSound('laser', laserSoundUrl);
+        // Load thruster sound ***
+        audioSystem.loadSound('thruster', thrusterSoundUrl);
     }
     
     // Get the selected ship type from the UI manager

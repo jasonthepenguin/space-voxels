@@ -22,6 +22,9 @@ let sharedFlashGeometry;
 let laserMaterials = {};  // Materials keyed by color hex
 let flashMaterials = {};  // Materials keyed by color hex
 
+// *** NEW: Create audioSystem instance here ***
+export let audioSystem = null; 
+
 // Function to update the cached raycast targets
 export function updateRaycastTargets(sun, planets) {
     cachedObjectsToTest = [];
@@ -154,7 +157,8 @@ export function initAudioSystem() {
     const soundBuffers = {};
     let isAudioInitialized = false;
     
-    return {
+    // *** NEW: Assign to exported variable ***
+    audioSystem = { 
         audioContext,
         soundBuffers,
         isAudioInitialized,
@@ -212,6 +216,9 @@ export function initAudioSystem() {
             }
         }
     };
+
+    // ** Return the initialized system ***
+    return audioSystem; 
 }
 
 // Update shootLaser function to use the Web Audio API system

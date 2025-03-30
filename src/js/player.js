@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { isKeyPressed } from './desktopControls.js';
+import { audioSystem } from './weapons.js';
 
 // Ship movement parameters
 export const SHIP_SPEED = 15; // Constant forward speed
@@ -17,6 +18,9 @@ const BOUNDARY_MIN_Y = -240;
 const BOUNDARY_MAX_Y = 240;
 const BOUNDARY_MIN_Z = -240;
 const BOUNDARY_MAX_Z = 240;
+
+// *** NEW: Track previous boost state ***
+let wasBoostingLastFrame = false;
 
 // Create player function
 export function createPlayer(scene, shipType = 'default') {
@@ -465,6 +469,13 @@ export function handleMovement(player, delta, updateCameraPosition, controls = n
     const boostActive = (isKeyPressed && (isKeyPressed('ShiftLeft') || isKeyPressed('ShiftRight'))) ||
                         (controls && controls.isBoostActive && controls.isBoostActive());
     
+    // *** NEW: Play thruster sound on boost start ***
+    if (boostActive && !wasBoostingLastFrame) {
+        if (audioSystem && audioSystem.isAudioInitialized) {
+            audioSystem.playSound('thruster', { volume: 0.6 }); // Play thruster sound
+        }
+    }
+    
     player.userData.boostActive = boostActive;
     const speedMultiplier = boostActive ? 2.0 : 1.0;
     const currentSpeed = SHIP_SPEED * speedMultiplier;
@@ -553,6 +564,9 @@ export function handleMovement(player, delta, updateCameraPosition, controls = n
     player.rotation.y += targetYawChange;
     player.rotation.x += targetPitchChange;
     player.rotation.z += targetRollChange;
+    
+    // *** NEW: Update boost state for next frame ***
+    wasBoostingLastFrame = boostActive; 
     
     updateCameraPosition();
 }

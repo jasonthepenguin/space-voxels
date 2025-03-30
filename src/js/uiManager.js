@@ -61,6 +61,11 @@ class UIManager {
         this.eliminationContainer.id = 'elimination-container';
         document.body.appendChild(this.eliminationContainer);
         
+        // Credits UI
+        this.soundCreditsLink = document.getElementById('sound-credits-link');
+        this.soundCreditsPopup = document.getElementById('sound-credits-popup');
+        this.closeSoundCreditsPopupButton = document.getElementById('close-sound-credits-popup');
+        
         // Initialize
         this.setupEventListeners();
         this.startFPSCounter();
@@ -338,6 +343,18 @@ class UIManager {
                     console.error("requestRespawnFromServer function not found on window");
                 }
             });
+        }
+        
+        
+        if (this.soundCreditsLink && this.soundCreditsPopup) {
+          this.soundCreditsLink.addEventListener('click', () => {
+            this.soundCreditsPopup.style.display = 'flex';
+          });
+        }
+        if (this.closeSoundCreditsPopupButton && this.soundCreditsPopup) {
+          this.closeSoundCreditsPopupButton.addEventListener('click', () => {
+            this.soundCreditsPopup.style.display = 'none';
+          });
         }
         
         // Resume overlay click
