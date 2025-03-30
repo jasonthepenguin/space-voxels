@@ -365,6 +365,15 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     
     lasers.push(laser);
     
+    // *** NEW: Emit laserFired event to server ***
+    if (socket && socket.connected) {
+        socket.emit('laserFired', {
+            startPos: startPos.toArray(), // Send as array for JSON compatibility
+            targetPoint: targetPoint.toArray(), // Send as array
+            shipType: player.userData.shipType || 'default'
+        });
+    }
+
     // Create impact flash if hitting something
     if (targetObject) {
         const flash = getFlashFromPool(scene, flashPool);
@@ -417,6 +426,48 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             // OPTIMIZATION: Create explosion immediately - no setTimeout
             createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
         }
+    }
+}
+
+// *** NEW Function: Create a visual-only laser for remote players ***
+export function createRemoteLaser(scene, laserPool, lasers, flashPool, startPosArray, targetPointArray, shipType) {
+    const startPos = new THREE.Vector3().fromArray(startPosArray);
+    const targetPoint = new THREE.Vector3().fromArray(targetPointArray);
+    const direction = targetPoint.clone().sub(startPos).normalize();
+
+    const laser = getLaserFromPool(scene, laserPool, lasers); // Reuse pool
+
+    // Calculate distance and set laser length
+    const distance = startPos.distanceTo(targetPoint);
+    laser.scale.z = distance;
+
+    // Position laser
+    laser.position.copy(startPos.clone().add(direction.clone().multiplyScalar(distance / 2)));
+    laser.lookAt(targetPoint);
+
+    // Set laser color based on ship type
+    const laserColor = SHIP_LASER_COLORS[shipType] || 0xff0000; // Use provided shipType
+    if (laserMaterials[laserColor]) {
+        laser.material = laserMaterials[laserColor];
+    }
+
+    // Set properties for visual-only laser
+    laser.life = 0.2; // Shorter lifespan for remote lasers
+    laser.target = null; // No target object for remote lasers (no collision check)
+    laser.visible = true; // Ensure it's visible
+
+    lasers.push(laser); // Add to active lasers for updateLasers to manage
+
+    // Optional: Create a small impact flash
+    const flash = getFlashFromPool(scene, flashPool);
+    flash.position.copy(targetPoint);
+    flash.name = "RemoteFlash";
+    flash.visible = true;
+    flash.life = 0.15; // Short lifespan
+
+    // Set flash color based on ship type
+    if (flashMaterials[laserColor]) {
+        flash.material = flashMaterials[laserColor];
     }
 }
 

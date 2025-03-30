@@ -58,7 +58,8 @@ import {
     updateLasers,
     initAudioSystem,
     updateFlashes,
-    updateRaycastTargets
+    updateRaycastTargets,
+    createRemoteLaser
 } from './weapons.js';
 
 import {
@@ -264,6 +265,21 @@ function init() {
     registerPointerLockCallback((isLocked) => {
         cursorLocked = isLocked;
         // Any other code you want to run when pointer lock state changes
+    });
+    
+    // *** NEW: Listen for remote lasers ***
+    socket.on('remoteLaserFired', (data) => {
+        if (player && data.playerId !== socket.id) { // Don't show our own lasers echoed back
+            createRemoteLaser(
+                scene, 
+                laserPool, 
+                lasers, 
+                flashPool, 
+                data.startPos, 
+                data.targetPoint, 
+                data.shipType
+            );
+        }
     });
     
     // Start animation loop
@@ -478,7 +494,7 @@ function handleAutoFire(currentTime) {
             orbitLines, 
             sun, 
             planets, 
-            socket, 
+            socket,
             getAllRemotePlayers()
         );
         lastShotTime = currentTime;
