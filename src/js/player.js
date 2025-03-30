@@ -8,6 +8,16 @@ export const SHIP_TURN_SPEED = 1.5; // How quickly the ship rotates
 export const SHIP_PITCH_SPEED = 1.0; // How quickly the ship pitches up/down
 export const SHIP_ROLL_SPEED = 1.2; // How quickly the ship rolls
 
+
+// Boundary checks
+// Playable boundary
+const BOUNDARY_MIN_X = -240;
+const BOUNDARY_MAX_X = 240;
+const BOUNDARY_MIN_Y = -240;
+const BOUNDARY_MAX_Y = 240;
+const BOUNDARY_MIN_Z = -240;
+const BOUNDARY_MAX_Z = 240;
+
 // Create player function
 export function createPlayer(scene, shipType = 'default') {
     // Create a group to hold all spaceship parts
@@ -462,6 +472,12 @@ export function handleMovement(player, delta, updateCameraPosition, controls = n
     const forwardDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
     player.position.add(forwardDirection.multiplyScalar(currentSpeed * delta));
     
+    // Boundary clamping
+    player.position.x = Math.max(BOUNDARY_MIN_X, Math.min(BOUNDARY_MAX_X, player.position.x));
+    player.position.y = Math.max(BOUNDARY_MIN_Y, Math.min(BOUNDARY_MAX_Y, player.position.y));
+    player.position.z = Math.max(BOUNDARY_MIN_Z, Math.min(BOUNDARY_MAX_Z, player.position.z));
+
+
     let targetYawChange = 0;
     let targetPitchChange = 0;
     let targetRollChange = 0;
