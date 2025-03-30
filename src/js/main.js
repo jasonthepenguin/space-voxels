@@ -112,7 +112,7 @@ let cursorLocked = false;
 
 // Laser fire cooldown
 let lastShotTime = 0;
-const FIRE_COOLDOWN = 200;
+const FIRE_COOLDOWN = 300;
 
 
 // Mobile controls
