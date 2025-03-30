@@ -188,20 +188,25 @@ class UIManager {
                     this.resumeOverlayElement.style.display = 'none';
                 }
                 
-                // Only show chat for desktop users
-                if (!this.isMobile) {
+                // Show appropriate controls based on device type
+                if (this.isMobile) {
+                    // Explicitly show mobile controls when entering PLAYING state
+                    if (this.mobileControlsElement) {
+                        this.mobileControlsElement.style.display = 'block';
+                    }
+                    // Ensure chat is hidden for mobile
+                    hideChat();
+                } else {
+                    // Show chat for desktop users
                     showChat();
-                }
-                
-                // Only request pointer lock on desktop
-                if (!this.isMobile) {
+                    // Request pointer lock on desktop
                     document.body.requestPointerLock = document.body.requestPointerLock || 
                                                     document.body.mozRequestPointerLock ||
                                                     document.body.webkitRequestPointerLock;
                     document.body.requestPointerLock();
                 }
                 
-                // Call the game start callback
+                // Call the game start callback ONLY when initially starting
                 if (this.gameStartCallback && (prevState === GameState.MAIN_MENU || prevState === GameState.USERNAME_INPUT)) {
                     this.gameStartCallback(this.username); // Pass username
                 }
