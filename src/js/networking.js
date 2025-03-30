@@ -7,7 +7,8 @@ let serverFull = false;
 import {
     addOrUpdateRemotePlayer,
     removeRemotePlayer,
-    respawnRemotePlayer,
+    hideRemotePlayerTemporarily,
+    showAndRespawnRemotePlayer,
     respawnLocalPlayer
 } from './remotePlayers.js';
 
@@ -87,34 +88,38 @@ export function initNetworking(updatePlayerCount, gameScene) {
     socket.on('playerHit', (data) => {
         console.log(`Received playerHit event for: ${data.targetId}, our ID: ${socket.id}`);
         if (data.targetId === socket.id && player) {
-            // We were hit, respawn our local player
-            console.log("We were hit! Respawning local player...");
-            respawnLocalPlayer(player, scene, updateCameraPositionFn, socket, true);
+            // We were hit. The 'playerDied' event will handle hiding our ship and showing death screen.
+            // No immediate action needed here for local player hit besides logging.
+            console.log("We were hit!"); 
         } else if (data.targetId !== socket.id) {
-            // Another player was hit, respawn them
-            console.log(`Remote player ${data.targetId} was hit, respawning them`);
-            respawnRemotePlayer(data.targetId, data.position, scene);
+            // Another player was hit, hide them temporarily until server confirms respawn
+            console.log(`Remote player ${data.targetId} was hit, hiding them.`);
+            hideRemotePlayerTemporarily(data.targetId);
+            // We no longer call respawnRemotePlayer here.
+            // The actual respawn/reappearance happens on 'playerRespawned' event.
         }
     });
 
-    // New event handler for when the local player dies
+    // New event handler for when the local player dies (server confirms kill)
     socket.on('playerDied', () => {
         console.log("Received playerDied event. Showing death screen.");
         playerIsDead = true;
         if (window.uiManager) {
             window.uiManager.showDeathScreen();
         }
-        // Optionally, you could also hide the player model here
+        // Hide the local player model
         if (player) {
-            player.visible = false;
+            player.visible = false; 
         }
     });
 
-    // New event handler for respawning the player (triggered by server)
-    socket.on('respawnPlayer', (data) => {
-        console.log("Received respawnPlayer event with position:", data.position);
+    // Renamed event from 'respawnPlayer' to 'localPlayerRespawn' for clarity
+    // This handles the respawn initiated by the local player's request
+    socket.on('localPlayerRespawn', (data) => { 
+        console.log("Received localPlayerRespawn event with position:", data.position);
         if (player && playerIsDead) {
-            respawnLocalPlayer(player, scene, updateCameraPositionFn, data.position, true);
+            // Pass the received position to the respawn function
+            respawnLocalPlayer(player, scene, updateCameraPositionFn, data.position, true); 
             playerIsDead = false;
             if (window.uiManager) {
                 window.uiManager.hideDeathScreen();
@@ -124,10 +129,36 @@ export function initNetworking(updatePlayerCount, gameScene) {
         }
     });
 
+    // NEW: Event handler for when ANY player respawns (local or remote)
+    // The server should send this after a player successfully respawns.
+    socket.on('playerRespawned', (data) => {
+        console.log(`Received playerRespawned event for ID: ${data.id}`);
+        if (data.id === socket.id) {
+            // If it's our local player, respawnLocalPlayer already made us visible
+            // via the 'localPlayerRespawn' event. We just need to ensure the state is correct.
+            if (player && playerIsDead) { // Double-check state just in case
+                 console.log("Received respawn confirmation for local player, ensuring visibility and state.");
+                 player.visible = true; 
+                 playerIsDead = false;
+                 if (window.uiManager) {
+                    window.uiManager.hideDeathScreen(); // Ensure death screen is hidden
+                 }
+            } else if (player) {
+                 player.visible = true; // Ensure visibility even if not marked dead
+                 playerIsDead = false;
+            }
+        } else {
+            // It's a remote player respawning, make them visible and place them
+            console.log(`Remote player ${data.id} respawned at`, data.position);
+            showAndRespawnRemotePlayer(data.id, data, scene);
+        }
+    });
+
+
     // Add a heartbeat mechanism to verify connectivity
     setInterval(() => {
         if (socket && socket.connected) {
-            console.log("Socket connection is active");
+            // console.log("Socket connection is active"); // Reduce noise
         } else {
             console.warn("Socket connection is not active!");
         }
@@ -168,4 +199,18 @@ export function requestRespawn(socket, isConnected) {
 // Function to get player death state
 export function isPlayerDead() {
     return playerIsDead;
+}
+
+// Add a function to explicitly set the player's death state
+// Useful if the server needs to forcefully kill a player client-side
+export function setPlayerDeadState(isDead) {
+    playerIsDead = isDead;
+    if (player) {
+        player.visible = !isDead; // Hide if dead, show if not
+    }
+    if (isDead && window.uiManager) {
+        window.uiManager.showDeathScreen();
+    } else if (!isDead && window.uiManager) {
+        window.uiManager.hideDeathScreen();
+    }
 }

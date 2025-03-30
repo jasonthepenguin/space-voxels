@@ -260,12 +260,15 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     // Create a copy of cached objects to test
     const objectsToTest = [...cachedObjectsToTest];
     
-    // Add remote players (these change frequently so we add them each time)
+    // Add VISIBLE remote players (these change frequently so we add them each time)
     if (remotePlayersRef) {
-        Object.values(remotePlayersRef).forEach(player => {
-            objectsToTest.push(player);
-            // Include player's children
-            player.children.forEach(child => objectsToTest.push(child));
+        Object.values(remotePlayersRef).forEach(remotePlayer => {
+            // *** Only add visible players to the list of targets ***
+            if (remotePlayer.visible) {
+                objectsToTest.push(remotePlayer);
+                // Include player's children ONLY if the parent is visible
+                remotePlayer.children.forEach(child => objectsToTest.push(child));
+            }
         });
     }
     
@@ -293,6 +296,9 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
                 for (const playerId in remotePlayersRef) {
                     const remotePlayer = remotePlayersRef[playerId];
                     
+                    // *** Only consider hits on VISIBLE remote players ***
+                    if (!remotePlayer.visible) continue; 
+
                     // Check if direct hit on player or any child
                     let isHit = targetObject === remotePlayer;
                     
@@ -380,11 +386,14 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
         
         // If we hit a remote player, send a hit event to the server
         if (hitRemotePlayer && socket) {
+            // *** NOTE: The event is now 'playerDied' which should be handled server-side
+            // to manage player states and broadcast necessary events ('playerHit', 'playerRespawned').
+            // Client-side, we primarily react to these broadcasts.
             console.log(`Sending playerDied event for player: ${hitRemotePlayer}`);
             
             // Show elimination message
             if (window.uiManager) {
-                window.uiManager.showEliminationMessage(100);
+                window.uiManager.showEliminationMessage(100); 
             }
             
             socket.emit('playerDied', { 
