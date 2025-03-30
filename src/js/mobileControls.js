@@ -275,8 +275,8 @@ export function getLookDelta() {
     }
     
     return {
-        x: lookAreaDelta.x * 0.1, // Scale down for smoother movement
-        y: lookAreaDelta.y * 0.1
+        x: lookAreaDelta.x * 0.50, // Scale down for smoother movement
+        y: lookAreaDelta.y * 0.50
     };
 }
 
