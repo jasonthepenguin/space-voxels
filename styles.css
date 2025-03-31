@@ -501,50 +501,92 @@ canvas {
 
 /* Ship selector styles */
 .ship-option {
-  width: 45%;
-  height: 120px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 5px;
+  /* width: 45%; */ /* Removed for grid layout */
+  /* height: 120px; */ /* Removed for dynamic height */
+  background-color: rgba(255, 255, 255, 0.05); /* Slightly more subtle */
+  border-radius: 8px; /* Slightly larger radius */
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between; /* Better vertical alignment */
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  padding: 10px;
-  margin: 5px;
+  padding: 15px; /* Increased padding */
+  /* margin: 5px; */ /* Grid gap will handle spacing */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  text-align: center; /* Center text */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Soft shadow */
+  position: relative; /* Needed for potential pseudo-elements */
+  overflow: hidden; /* Ensure content stays within bounds */
 }
 
 .ship-option:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-5px);
+  background-color: rgba(255, 255, 255, 0.15); /* Clearer hover */
+  transform: translateY(-3px) scale(1.02); /* Add slight scale */
+  box-shadow: 0 5px 15px rgba(0, 100, 255, 0.2); /* Hover shadow */
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* NEW: Selected state styling */
+.ship-option.selected {
+  background-color: rgba(76, 175, 80, 0.15); /* Greenish background */
+  border: 2px solid #4CAF50; /* Green border */
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.4); /* Green glow */
+  transform: scale(1.03); /* Slightly larger scale when selected */
+}
+
+.ship-option.selected::after { /* Optional: Add a small checkmark or indicator */
+  content: '✔';
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  color: #4CAF50;
+  font-size: 16px;
+  font-weight: bold;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  line-height: 1;
 }
 
 .ship-option img {
-  width: 70px;
-  height: 70px;
-  margin-bottom: 10px;
+  width: 80px; /* Slightly larger image */
+  height: 80px;
+  margin-bottom: 15px; /* More space below image */
   border-radius: 5px;
   object-fit: contain;
   transition: all 0.3s ease;
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 5px;
+  background-color: rgba(0, 0, 0, 0.3); /* Darker background for contrast */
+  padding: 8px; /* More padding around image */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border on image */
+}
+
+.ship-option.selected img {
+   /* Remove the old box shadow approach */
+   /* box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); */
+   border-color: #4CAF50; /* Match selected border */
 }
 
 .ship-option span {
   font-weight: bold;
   color: white;
+  font-size: 14px; /* Adjust font size if needed */
+  margin-bottom: 10px; /* Space before price tag */
 }
 
 /* Price tag styling */
 .price-tag {
   background-color: #4CAF50;
   color: white;
-  padding: 3px 8px;
+  padding: 4px 10px; /* Adjust padding */
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px; /* Slightly smaller */
   font-weight: bold;
-  margin-top: 5px;
+  /* margin-top: 5px; */ /* Removed, using flexbox space-between now */
   display: inline-block;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -555,28 +597,40 @@ canvas {
 }
 
 .ship-option[data-tier="premium"] {
-  background-color: rgba(255, 215, 0, 0.1);
+  background-color: rgba(255, 215, 0, 0.08); /* More subtle premium background */
   border: 1px solid rgba(255, 215, 0, 0.3);
   position: relative;
   overflow: hidden;
 }
 
+/* Update premium selected state */
+.ship-option[data-tier="premium"].selected {
+  background-color: rgba(255, 215, 0, 0.2); /* Goldish background */
+  border: 2px solid #FFD700; /* Gold border */
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); /* Gold glow */
+}
+.ship-option[data-tier="premium"].selected::after {
+  color: #b38f00; /* Darker gold for checkmark */
+  background-color: rgba(255, 215, 0, 0.8);
+}
+
 .ship-option[data-tier="premium"]::before {
   content: "PREMIUM";
   position: absolute;
-  top: 10px;
-  right: -30px;
+  top: 8px; /* Adjust position */
+  right: -35px; /* Adjust position */
   background-color: #FFD700;
   color: #333;
   transform: rotate(45deg);
-  padding: 2px 30px;
-  font-size: 10px;
+  padding: 3px 35px; /* Adjust padding */
+  font-size: 9px; /* Smaller font */
   font-weight: bold;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+  z-index: 1; /* Ensure it's above other content */
 }
 
 .ship-option[data-tier="premium"] img {
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); /* Less intense shadow */
 }
 
 .ship-option[data-tier="premium"] .price-tag {
@@ -613,21 +667,41 @@ canvas {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.7);
+  /* background-color: rgba(0, 0, 0, 0.7); */ /* Replaced with gradient */
+  background: linear-gradient(145deg, rgba(25, 35, 55, 0.95) 0%, rgba(40, 60, 90, 0.95) 100%); /* Nicer gradient */
   color: white;
-  padding: 20px;
-  border-radius: 5px;
+  padding: 25px 30px; /* More padding */
+  border-radius: 12px; /* Smoother corners */
   text-align: center;
   max-width: 90%;
-  width: 500px;
+  width: 600px; /* Slightly wider */
   z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); /* Stronger shadow */
+  border: 1px solid rgba(255, 255, 255, 0.15); /* Clearer border */
+  backdrop-filter: blur(8px); /* Add blur effect */
 }
 
+#ship-builder-ui h1 {
+  font-size: 28px; /* Adjust size */
+  margin-bottom: 10px;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0, 150, 255, 0.6);
+}
+
+#ship-builder-ui p {
+  margin-bottom: 25px; /* More space below subtitle */
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Use Grid layout for ship options */
 #ship-builder-ui > div {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
-  margin: 20px 0;
+  display: grid; /* Use grid */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* Responsive columns */
+  gap: 20px; /* Spacing between grid items */
+  /* flex-wrap: wrap; */ /* No longer needed */
+  /* justify-content: space-around; */ /* No longer needed */
+  margin: 20px 0 30px; /* Adjust vertical margins */
 }
 
 /* Add this to your styles.css file */
@@ -919,8 +993,6 @@ canvas {
   color: rgba(255, 255, 255, 0.6);
 }
 
-
-
 .credits-section a {
   display: none;
 }
@@ -979,7 +1051,6 @@ canvas {
 .creator-info a {
   display: flex; /* Override the general hiding of links in credits */
 }
-
 
 .special-thanks {
   margin-top: 15px;
