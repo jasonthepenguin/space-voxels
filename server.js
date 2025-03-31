@@ -67,7 +67,7 @@ const GLOBAL_ROOM = 'global';
 // Game state storage (Global)
 const gameState = {
   players: {},
-  destroyedVoxels: []
+  destroyedVoxels: new Map() // Use Map<string, Set<number>> for bodyId -> instanceIds
 };
 
 // *** MOVED HERE: Server-Side Player Hitbox Cache (Global) ***
@@ -134,6 +134,15 @@ function distanceSquared(pos1, pos2) {
   return dx * dx + dy * dy + dz * dz;
 }
 
+// *** NEW: Helper to serialize destroyedVoxels map for JSON ***
+function serializeDestroyedVoxels(map) {
+    const obj = {};
+    for (const [key, value] of map.entries()) {
+        obj[key] = Array.from(value); // Convert Set to Array
+    }
+    return obj;
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
 
@@ -175,14 +184,14 @@ io.on('connection', (socket) => {
   
   socket.emit('serverTime', { timestamp: Date.now() });
 
-  // Send existing players who are ready
+  // Send existing players who are ready AND the current destroyed voxel state
   socket.emit('roomState', {
     players: Object.fromEntries(
       Object.entries(gameState.players)
-        // Filter for players who are ready AND NOT dead
-        .filter(([id, player]) => player.isReady && !player.isDead && id !== socket.id) 
+        .filter(([id, player]) => player.isReady && !player.isDead && id !== socket.id)
     ),
-    destroyedVoxels: gameState.destroyedVoxels
+    // *** Send serialized destroyed voxel state ***
+    destroyedVoxels: serializeDestroyedVoxels(gameState.destroyedVoxels)
   });
   
   // Update and broadcast player count
@@ -415,29 +424,49 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Handle voxel destruction
+  // Handle voxel destruction - REVISED
   socket.on('destroyVoxel', (data) => {
     try {
-      const { voxelId, planetId } = data;
-      
-      // Add to destroyed voxels list
-      gameState.destroyedVoxels.push({
-        voxelId,
-        planetId,
-        destroyedBy: socket.id,
-        timestamp: Date.now()
-      });
-      
-      // Broadcast to all players in the room
+      // Basic Validation
+      if (!data || typeof data.bodyId !== 'string' || typeof data.instanceId !== 'number' || data.instanceId < 0 || !Number.isInteger(data.instanceId)) {
+        console.warn(`Invalid destroyVoxel data from ${socket.id}:`, data);
+        return;
+      }
+
+      const { bodyId, instanceId } = data;
+      const player = gameState.players[socket.id];
+
+      // Player State Check
+      if (!player || !player.isReady || player.isDead) {
+        console.log(`Ignoring destroyVoxel from invalid player state: ${socket.id}`);
+        return; // Ignore if player isn't in a state to destroy
+      }
+
+      // Check if already destroyed
+      const bodySet = gameState.destroyedVoxels.get(bodyId);
+      if (bodySet && bodySet.has(instanceId)) {
+        // console.log(`Voxel ${instanceId} on ${bodyId} already destroyed, ignoring.`);
+        return; // Already destroyed
+      }
+
+      // Update server state
+      if (!bodySet) {
+        gameState.destroyedVoxels.set(bodyId, new Set([instanceId]));
+      } else {
+        bodySet.add(instanceId);
+      }
+
+      // Broadcast to all players in the room (including sender for consistency)
       io.to(GLOBAL_ROOM).emit('voxelDestroyed', {
-        voxelId,
-        planetId,
-        destroyedBy: socket.id
+        bodyId,
+        instanceId,
+        destroyedBy: socket.id // Optional: include who destroyed it
       });
-      
-      console.log(`Voxel ${voxelId} on planet ${planetId} destroyed by ${socket.id}`);
+
+      console.log(`Voxel ${instanceId} on ${bodyId} destroyed by ${socket.id}`);
+
     } catch (error) {
-      console.error(`Error in destroyVoxel: ${error.message}`);
+      console.error(`Error in destroyVoxel: ${error.message}`, error.stack);
     }
   });
 
@@ -674,10 +703,15 @@ setInterval(() => {
   }
 }, 30000);
 
-// Respawn planets every 30 seconds
+// Respawn planets every 30 seconds - REVISED
 setInterval(() => {
   if (getPlayerCount() > 0) { // Check if players are connected
-    io.emit('respawnPlanets');
+    // Clear server state BEFORE broadcasting
+    gameState.destroyedVoxels.clear();
+    console.log('Cleared server destroyed voxel state.');
+
+    // Now broadcast the respawn event
+    io.to(GLOBAL_ROOM).emit('respawnPlanets');
     console.log('Broadcasting planet respawn event.');
   } else {
     console.log('Skipping planet respawn broadcast, no players connected.');

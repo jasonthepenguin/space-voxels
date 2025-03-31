@@ -265,42 +265,38 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     });
 
     // Create a copy of cached objects to test (planets, sun, moon)
-    // We NO LONGER test against remote players on the client for hits
     const objectsToTest = [...cachedObjectsToTest];
     
-    // ONLY raycast against environment objects (planets, sun, moon) on the client
     const intersects = raycaster.intersectObjects(objectsToTest, true);
     
     let targetPoint, targetObject, targetParent, instanceId;
-    // Removed: let hitRemotePlayer = null;
 
     if (intersects.length > 0) {
-        // Filter out hits too close to the player (e.g., hitting the planet you just took off from)
         const filteredIntersects = intersects.filter(intersect => {
             const distanceFromPlayer = player.position.distanceTo(intersect.point);
             return distanceFromPlayer >= 6;
         });
         
         if (filteredIntersects.length > 0) {
-            // Hit something valid (environment)
             targetPoint = filteredIntersects[0].point;
             targetObject = filteredIntersects[0].object;
             
-            // Capture instance ID for instanced meshes (like planet voxels)
             if (targetObject.isInstancedMesh) {
                 instanceId = filteredIntersects[0].instanceId;
             }
             
-            // Find the parent group (sun, planet, or moon)
-            targetParent = targetObject.parent;
+            // Traverse up to find the actual celestial body Group (Sun, Earth, Moon, etc.)
+            let currentParent = targetObject.parent;
+            while (currentParent && !['Sun', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Moon'].includes(currentParent.name)) {
+                 currentParent = currentParent.parent;
+            }
+            targetParent = currentParent; // This should now be the Group object like 'Earth' or 'Sun'
         } else {
-            // Nothing valid hit, shoot into distance
             targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
             targetObject = null;
             targetParent = null;
         }
     } else {
-        // Nothing hit, shoot into distance
         targetPoint = startPos.clone().add(direction.clone().multiplyScalar(100));
         targetObject = null;
         targetParent = null;
@@ -329,11 +325,11 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
     
     // Set laser properties
     laser.life = 0.3;
-    laser.target = targetObject; // Still track target for client-side effects if needed
+    laser.target = targetObject; // Keep for potential client-side effects
     
     lasers.push(laser);
     
-    // *** Emit laserFired event to server - this remains crucial ***
+    // *** Emit laserFired event to server ***
     if (socket && socket.connected) {
         socket.emit('laserFired', {
             startPos: startPos.toArray(),
@@ -361,16 +357,30 @@ export function shootLaser(scene, player, raycaster, laserPool, lasers, flashPoo
             }
         }
         
-        // Create explosion on environment objects
-        if (targetObject && targetParent &&
-            (targetParent === sun ||
-             planets.includes(targetParent) ||
-             planets.some(p => p.moon && targetParent === p.moon))) {
+        // Create explosion on environment objects LOCALLY and notify server
+        if (targetParent && targetObject.isInstancedMesh && instanceId !== undefined) { // Ensure we have a valid parent and instanceId
             
-            const localPoint = targetParent.worldToLocal(targetPoint.clone());
+            // Determine if it's Saturn's rings
             const isSaturnRings = targetParent.name === 'Saturn' &&
-                                 targetObject === targetParent.ringInstancedMesh;
+                                  targetObject === targetParent.ringInstancedMesh;
+
+            // Determine the ID for the server
+            const bodyId = isSaturnRings ? 'SaturnRings' : targetParent.name;
+
+            // Calculate local point relative to the parent Group
+            const localPoint = targetParent.worldToLocal(targetPoint.clone());
+
+            // *** Create local explosion immediately for responsiveness ***
             createExplosion(targetParent, localPoint, instanceId, isSaturnRings);
+
+            // *** Report destruction to the server ***
+            if (socket && socket.connected) {
+                socket.emit('destroyVoxel', {
+                    bodyId: bodyId,
+                    instanceId: instanceId
+                });
+                console.log(`Sent destroyVoxel: ${bodyId}, ${instanceId}`);
+            }
         }
     }
 }
