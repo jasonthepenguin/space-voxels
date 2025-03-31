@@ -279,39 +279,15 @@ class UIManager {
         shipOptions.forEach(option => {
             option.addEventListener('click', () => {
                 // Remove selected class from all options
-                shipOptions.forEach(opt => opt.style.backgroundColor = 'rgba(255, 255, 255, 0.1)');
+                shipOptions.forEach(opt => opt.classList.remove('selected'));
                 
                 // Add selected class to clicked option
-                option.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                
-                // Add a subtle glow effect to the selected ship image
-                const images = document.querySelectorAll('.ship-option img');
-                images.forEach(img => {
-                    img.style.boxShadow = 'none';
-                });
-                
-                const selectedImage = option.querySelector('img');
-                if (selectedImage) {
-                    selectedImage.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.8)';
-                }
+                option.classList.add('selected');
                 
                 // Store selected ship
                 const shipName = option.querySelector('span').textContent;
                 this.selectedShip = shipName === 'Default Ship' ? 'default' : shipName;
                 console.log(`Selected ship: ${this.selectedShip}`);
-            });
-            
-            // Add hover effect
-            option.addEventListener('mouseenter', () => {
-                if (option.style.backgroundColor !== 'rgba(255, 255, 255, 0.3)') {
-                    option.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                }
-            });
-            
-            option.addEventListener('mouseleave', () => {
-                if (option.style.backgroundColor !== 'rgba(255, 255, 255, 0.3)') {
-                    option.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                }
             });
         });
         
@@ -321,13 +297,8 @@ class UIManager {
         );
         
         if (defaultShipOption) {
-            defaultShipOption.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-            
-            const selectedImage = defaultShipOption.querySelector('img');
-            if (selectedImage) {
-                selectedImage.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.8)';
-            }
-            
+            // Add selected class instead
+            defaultShipOption.classList.add('selected');
             this.selectedShip = 'default';
         }
         

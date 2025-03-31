@@ -374,96 +374,173 @@ function createBlockWing(player, xPos, yPos, zPos, material, isLeft) {
     player.add(wingConnector);
 }
 
-// Chris Ship (already uses mostly BoxGeometry, minor adjustments)
+// Chris Ship (Star Wars X-Wing Inspired Design)
 function createChrisShip(player) {
-    // Materials
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xcc3333 }); // Red body
-    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 }); // Dark wings
-    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0x3366cc }); // Blue accents
-    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffcccc, 
-        transparent: true, 
-        opacity: 0.7 
+    // Materials - Inspired by X-Wing colors
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc }); // Light gray body
+    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa }); // Slightly darker gray for wings
+    const stripeMaterial = new THREE.MeshStandardMaterial({ color: 0xcc3333 }); // Red stripe accent
+    const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 }); // Dark gray engines
+    const cockpitMaterial = new THREE.MeshStandardMaterial({
+        color: 0x333333, // Dark, slightly reflective cockpit
+        metalness: 0.5,
+        roughness: 0.2
     });
-    
-    // Main body - angular and aggressive
-    const bodyGeometry = new THREE.BoxGeometry(2, 1, 5);
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    player.add(body);
-    
-    // Front nose - now a box instead of cone
-    const noseGeometry = new THREE.BoxGeometry(1.5, 0.8, 2);
+
+    // Main fuselage - Long and narrow
+    const fuselageGeometry = new THREE.BoxGeometry(1.2, 1, 6);
+    const fuselage = new THREE.Mesh(fuselageGeometry, bodyMaterial);
+    fuselage.position.set(0, 0, -0.5); // Shift back slightly
+    player.add(fuselage);
+
+    // Nose section - Tapered front
+    const noseGeometry = new THREE.BoxGeometry(1, 0.8, 1.5);
     const nose = new THREE.Mesh(noseGeometry, bodyMaterial);
-    nose.position.set(0, 0, -3);
+    nose.position.set(0, -0.1, -3.5);
     player.add(nose);
-    
-    // Nose tip - smaller box
-    const noseTipGeometry = new THREE.BoxGeometry(0.8, 0.5, 0.5);
-    const noseTip = new THREE.Mesh(noseTipGeometry, bodyMaterial);
-    noseTip.position.set(0, 0, -4);
-    player.add(noseTip);
-    
-    // Cockpit - angular
-    const cockpitGeometry = new THREE.BoxGeometry(1.2, 0.8, 1.5);
+
+    // Cockpit - Positioned towards the front of the main fuselage
+    const cockpitGeometry = new THREE.BoxGeometry(0.8, 0.6, 1.2);
     const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-    cockpit.position.set(0, 0.8, -1);
+    cockpit.position.set(0, 0.6, -2.2); // Raised and forward
     player.add(cockpit);
-    
-    // Wings - now made of multiple boxes
-    // Left wing
-    const leftWingGeometry = new THREE.BoxGeometry(0.5, 0.3, 3);
-    const leftWing = new THREE.Mesh(leftWingGeometry, wingMaterial);
-    leftWing.position.set(-2, -0.3, 0);
-    leftWing.rotation.y = Math.PI / 8; // Angle slightly
-    player.add(leftWing);
-    
-    // Left wing tip
-    const leftWingTipGeometry = new THREE.BoxGeometry(0.5, 0.5, 1.5);
-    const leftWingTip = new THREE.Mesh(leftWingTipGeometry, wingMaterial);
-    leftWingTip.position.set(-3, -0.2, -0.5);
-    player.add(leftWingTip);
-    
-    // Right wing
-    const rightWingGeometry = new THREE.BoxGeometry(0.5, 0.3, 3);
-    const rightWing = new THREE.Mesh(rightWingGeometry, wingMaterial);
-    rightWing.position.set(2, -0.3, 0);
-    rightWing.rotation.y = -Math.PI / 8; // Angle slightly
-    player.add(rightWing);
-    
-    // Right wing tip
-    const rightWingTipGeometry = new THREE.BoxGeometry(0.5, 0.5, 1.5);
-    const rightWingTip = new THREE.Mesh(rightWingTipGeometry, wingMaterial);
-    rightWingTip.position.set(3, -0.2, -0.5);
-    player.add(rightWingTip);
-    
-    // Vertical stabilizers
-    const stabilizerGeometry = new THREE.BoxGeometry(0.2, 1.5, 1);
-    
-    // Left stabilizer
-    const leftStabilizer = new THREE.Mesh(stabilizerGeometry, wingMaterial);
-    leftStabilizer.position.set(-1, 0.5, 2);
-    player.add(leftStabilizer);
-    
-    // Right stabilizer
-    const rightStabilizer = new THREE.Mesh(stabilizerGeometry, wingMaterial);
-    rightStabilizer.position.set(1, 0.5, 2);
-    player.add(rightStabilizer);
-    
-    // Engine exhausts - now boxes instead of cylinders
-    // Create 3 exhausts
-    for (let i = -1; i <= 1; i++) {
-        const exhaust = new THREE.Mesh(
-            new THREE.BoxGeometry(0.6, 0.6, 0.5),
-            accentMaterial
-        );
-        exhaust.position.set(i * 0.7, 0, 2.7);
-        player.add(exhaust);
-    }
-    
-    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
+
+    // Astromech droid slot (behind cockpit) - Simple representation
+    const droidSocketGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const droidSocket = new THREE.Mesh(droidSocketGeometry, engineMaterial); // Use engine color
+    droidSocket.position.set(0, 0.6, -1.2);
+    player.add(droidSocket);
+
+    // S-foils (Wings) - Create four wing sections
+    const wingWidth = 4;
+    const wingDepth = 2.5;
+    const wingThickness = 0.2;
+    const wingAngle = Math.PI / 18; // Slight angle for X shape
+
+    const wingGeometry = new THREE.BoxGeometry(wingWidth, wingThickness, wingDepth);
+
+    // Top-Left Wing
+    const topLeftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    topLeftWing.position.set(-wingWidth / 2 - 0.5, 0.3, 0);
+    topLeftWing.rotation.z = wingAngle;
+    player.add(topLeftWing);
+
+    // Top-Right Wing
+    const topRightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    topRightWing.position.set(wingWidth / 2 + 0.5, 0.3, 0);
+    topRightWing.rotation.z = -wingAngle;
+    player.add(topRightWing);
+
+    // Bottom-Left Wing
+    const bottomLeftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    bottomLeftWing.position.set(-wingWidth / 2 - 0.5, -0.3, 0);
+    bottomLeftWing.rotation.z = -wingAngle; // Opposite angle
+    player.add(bottomLeftWing);
+
+    // Bottom-Right Wing
+    const bottomRightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    bottomRightWing.position.set(wingWidth / 2 + 0.5, -0.3, 0);
+    bottomRightWing.rotation.z = wingAngle; // Opposite angle
+    player.add(bottomRightWing);
+
+    // Add Red Stripes to wings
+    const stripeGeometry = new THREE.BoxGeometry(wingWidth * 0.8, wingThickness + 0.01, wingDepth * 0.2); // Slightly thicker to avoid z-fighting
+
+    const stripeOffsetY = 0; // Position stripe in the middle of the wing depth
+    const stripeOffsetX = wingWidth / 2 + 0.5; // Match wing position offset
+
+    // Top-Left Stripe
+    const topLeftStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+    topLeftStripe.position.set(-stripeOffsetX, 0.3, stripeOffsetY);
+    topLeftStripe.rotation.z = wingAngle;
+    player.add(topLeftStripe);
+
+    // Top-Right Stripe
+    const topRightStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+    topRightStripe.position.set(stripeOffsetX, 0.3, stripeOffsetY);
+    topRightStripe.rotation.z = -wingAngle;
+    player.add(topRightStripe);
+
+    // Bottom-Left Stripe
+    const bottomLeftStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+    bottomLeftStripe.position.set(-stripeOffsetX, -0.3, stripeOffsetY);
+    bottomLeftStripe.rotation.z = -wingAngle;
+    player.add(bottomLeftStripe);
+
+    // Bottom-Right Stripe
+    const bottomRightStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+    bottomRightStripe.position.set(stripeOffsetX, -0.3, stripeOffsetY);
+    bottomRightStripe.rotation.z = wingAngle;
+    player.add(bottomRightStripe);
+
+
+    // Engines (at the back of the wings)
+    const engineRadius = 0.4;
+    const engineLength = 1.5;
+    const engineGeometry = new THREE.BoxGeometry(engineRadius * 2, engineRadius * 2, engineLength); // Using Box for consistency
+
+    const engineOffsetZ = wingDepth / 2 - engineLength / 2 + 0.2; // Position towards back of wing
+
+    // Top-Left Engine
+    const topLeftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    topLeftEngine.position.set(-stripeOffsetX, 0.3, engineOffsetZ);
+    topLeftEngine.rotation.z = wingAngle;
+    player.add(topLeftEngine);
+
+    // Top-Right Engine
+    const topRightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    topRightEngine.position.set(stripeOffsetX, 0.3, engineOffsetZ);
+    topRightEngine.rotation.z = -wingAngle;
+    player.add(topRightEngine);
+
+    // Bottom-Left Engine
+    const bottomLeftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    bottomLeftEngine.position.set(-stripeOffsetX, -0.3, engineOffsetZ);
+    bottomLeftEngine.rotation.z = -wingAngle;
+    player.add(bottomLeftEngine);
+
+    // Bottom-Right Engine
+    const bottomRightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    bottomRightEngine.position.set(stripeOffsetX, -0.3, engineOffsetZ);
+    bottomRightEngine.rotation.z = wingAngle;
+    player.add(bottomRightEngine);
+
+    // Wingtip Cannons (Simplified as boxes)
+    const cannonLength = 1.0;
+    const cannonSize = 0.15;
+    const cannonGeometry = new THREE.BoxGeometry(cannonSize, cannonSize, cannonLength);
+
+    const cannonOffsetX = wingWidth + 0.5; // Place at the wing tips
+    const cannonOffsetZ = -wingDepth / 2 + cannonLength / 2 - 0.1; // Position at front edge of wing
+
+    // Top-Left Cannon
+    const topLeftCannon = new THREE.Mesh(cannonGeometry, engineMaterial);
+    topLeftCannon.position.set(-cannonOffsetX, 0.3, cannonOffsetZ);
+    topLeftCannon.rotation.z = wingAngle;
+    player.add(topLeftCannon);
+
+    // Top-Right Cannon
+    const topRightCannon = new THREE.Mesh(cannonGeometry, engineMaterial);
+    topRightCannon.position.set(cannonOffsetX, 0.3, cannonOffsetZ);
+    topRightCannon.rotation.z = -wingAngle;
+    player.add(topRightCannon);
+
+    // Bottom-Left Cannon
+    const bottomLeftCannon = new THREE.Mesh(cannonGeometry, engineMaterial);
+    bottomLeftCannon.position.set(-cannonOffsetX, -0.3, cannonOffsetZ);
+    bottomLeftCannon.rotation.z = -wingAngle;
+    player.add(bottomLeftCannon);
+
+    // Bottom-Right Cannon
+    const bottomRightCannon = new THREE.Mesh(cannonGeometry, engineMaterial);
+    bottomRightCannon.position.set(cannonOffsetX, -0.3, cannonOffsetZ);
+    bottomRightCannon.rotation.z = wingAngle;
+    player.add(bottomRightCannon);
+
+    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS (using stripe material for accent)
     const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
-    const gun = new THREE.Mesh(gunGeometry, accentMaterial);
-    gun.position.set(0, 0, -2.5);
+    const gun = new THREE.Mesh(gunGeometry, stripeMaterial); // Use red stripe material
+    gun.position.set(0, 0, -2.5); // Keep original position
     player.add(gun);
 }
 

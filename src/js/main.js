@@ -82,7 +82,9 @@ import {
 import {
     addOrUpdateRemotePlayer,
     removeRemotePlayer,
-    getAllRemotePlayers
+    getAllRemotePlayers,
+    hideRemotePlayerTemporarily,
+    showAndRespawnRemotePlayer
 } from './remotePlayers.js';
 
 // Import textures and sounds using ES modules
@@ -256,8 +258,8 @@ function init() {
     // Setup event listeners
     setupEventListeners();
     
-    // Connect to multiplayer server - updated with no player reference yet
-    const networkingData = initNetworking(updatePlayerCount, scene);
+    // Connect to multiplayer server - Pass sun and planets
+    const networkingData = initNetworking(updatePlayerCount, scene, sun, planets);
     socket = networkingData.socket;
     playerId = networkingData.playerId;
     isConnected = networkingData.isConnected;
@@ -280,6 +282,81 @@ function init() {
                 data.targetPoint, 
                 data.shipType
             );
+        }
+    });
+    
+    // *** NEW: Listen for voxel destruction broadcasts ***
+    socket.on('voxelDestroyed', ({ bodyId, instanceId }) => {
+        // Find the celestial body
+        let targetParent = null;
+        let isSaturnRings = false;
+
+        if (bodyId === 'Sun') {
+            targetParent = sun;
+        } else if (bodyId === 'SaturnRings') {
+            targetParent = planets.find(p => p.name === 'Saturn');
+            isSaturnRings = true;
+        } else if (bodyId === 'Moon') {
+            const earth = planets.find(p => p.name === 'Earth');
+            targetParent = earth ? earth.moon : null;
+        } else {
+            targetParent = planets.find(p => p.name === bodyId);
+        }
+
+        if (targetParent) {
+            // Use a dummy position as we only need parent, instanceId, and isSaturnRings
+            // createExplosion primarily uses instanceId to hide the voxel
+            const dummyLocalPos = new THREE.Vector3(); // Not actually used for hiding logic
+            createExplosion(targetParent, dummyLocalPos, instanceId, isSaturnRings);
+        } else {
+            console.warn(`Could not find celestial body with ID: ${bodyId} for voxel destruction.`);
+        }
+    });
+
+    // *** NEW: Listen for planet respawn broadcasts ***
+    socket.on('respawnPlanets', () => {
+        console.log('Received respawnPlanets event from server.');
+        respawnAllCelestialBodies(sun, planets);
+    });
+
+    // *** NEW: Handle initial destroyed voxels from roomState ***
+     socket.on('roomState', (state) => {
+        // Handle existing players
+        for (const id in state.players) {
+            if (id !== socket.id) { // Check if player is not already dead/hidden
+                 addOrUpdateRemotePlayer(scene, id, state.players[id]);
+            }
+        }
+
+        // Handle initial destroyed voxels
+        if (state.destroyedVoxels) {
+            console.log("Processing initial destroyed voxels:", state.destroyedVoxels);
+            for (const bodyId in state.destroyedVoxels) {
+                const instanceIds = state.destroyedVoxels[bodyId];
+                let targetParent = null;
+                let isSaturnRings = false;
+
+                // Find the body
+                if (bodyId === 'Sun') targetParent = sun;
+                else if (bodyId === 'SaturnRings') {
+                    targetParent = planets.find(p => p.name === 'Saturn');
+                    isSaturnRings = true;
+                } else if (bodyId === 'Moon') {
+                     const earth = planets.find(p => p.name === 'Earth');
+                     targetParent = earth ? earth.moon : null;
+                } else targetParent = planets.find(p => p.name === bodyId);
+
+                if (targetParent && Array.isArray(instanceIds)) {
+                    const dummyLocalPos = new THREE.Vector3();
+                    instanceIds.forEach(instanceId => {
+                        if (typeof instanceId === 'number') {
+                           createExplosion(targetParent, dummyLocalPos, instanceId, isSaturnRings);
+                        }
+                    });
+                } else {
+                     console.warn(`Could not find body ${bodyId} or invalid instanceIds for initial destruction.`);
+                }
+            }
         }
     });
     
