@@ -84,37 +84,44 @@ export function initNetworking(updatePlayerCount, gameScene) {
         }
     });
     
-    // Updated event handler for player hit using imported functions
+    // Updated event handler for player hit (Now driven by SERVER confirmation)
     socket.on('playerHit', (data) => {
         console.log(`Received playerHit event for: ${data.targetId}, our ID: ${socket.id}`);
-        if (data.targetId === socket.id && player) {
-            // We were hit. The 'playerDied' event will handle hiding our ship and showing death screen.
-            // No immediate action needed here for local player hit besides logging.
-            console.log("We were hit!"); 
-        } else if (data.targetId !== socket.id) {
-            // Another player was hit, hide them temporarily until server confirms respawn
-            console.log(`Remote player ${data.targetId} was hit, hiding them.`);
-            hideRemotePlayerTemporarily(data.targetId);
-            // We no longer call respawnRemotePlayer here.
-            // The actual respawn/reappearance happens on 'playerRespawned' event.
+        if (data.targetId === socket.id) {
+            // We were hit! Server confirmed.
+            // The 'playerDied' event (sent specifically to us) will handle the death screen.
+            console.log("Server confirmed we were hit!");
+        } else {
+            // Another player was hit, hide them temporarily until server confirms respawn via 'playerRespawned'.
+            console.log(`Remote player ${data.targetId} was hit (server confirmed), hiding them.`);
+            hideRemotePlayerTemporarily(data.targetId); // Hide visual model
+            // No need to call respawn logic here.
         }
     });
 
-    // New event handler for when the local player dies (server confirms kill)
+    // Event handler for when the local player dies (server confirms kill)
     socket.on('playerDied', () => {
-        console.log("Received playerDied event. Showing death screen.");
+        console.log("Received playerDied event from server. Showing death screen.");
         playerIsDead = true;
         if (window.uiManager) {
             window.uiManager.showDeathScreen();
         }
         // Hide the local player model
         if (player) {
-            player.visible = false; 
+            player.visible = false;
+        }
+    });
+
+    // *** NEW: Listen for kill confirmation from the server ***
+    socket.on('killConfirmed', (data) => {
+        console.log(`Kill confirmed by server! Victim: ${data.victimId}, Points: ${data.points}`);
+        // Trigger the UI popup now that the server confirmed the kill
+        if (window.uiManager) {
+            window.uiManager.showEliminationMessage(data.points || 100); // Use points from server if available
         }
     });
 
     // Renamed event from 'respawnPlayer' to 'localPlayerRespawn' for clarity
-    // This handles the respawn initiated by the local player's request
     socket.on('localPlayerRespawn', (data) => { 
         console.log("Received localPlayerRespawn event with position:", data.position);
         if (player && playerIsDead) {
