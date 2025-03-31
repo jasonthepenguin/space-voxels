@@ -23,10 +23,17 @@ const BOUNDARY_MAX_Z = 240;
 let wasBoostingLastFrame = false;
 
 // Create player function
-export function createPlayer(scene, shipType = 'default') {
+export function createPlayer(scene, shipType = 'default', initialPosition = null) {
     // Create a group to hold all spaceship parts
     const player = new THREE.Group();
-    player.position.set(0, 20, 70);
+    
+    // Use initial position if provided, otherwise default
+    if (initialPosition) {
+        player.position.set(initialPosition.x, initialPosition.y, initialPosition.z);
+    } else {
+        player.position.set(0, 20, 70); // Fallback default position
+    }
+    
     player.rotation.order = 'YXZ'; // Set rotation order to match camera
     
     // Store the ship type on the player object for reference
