@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import uiManager, { GameState } from './uiManager.js';
 import { io } from 'socket.io-client';
-import { serverTimeOffset } from './networking.js';
+import { serverTimeOffset, getInitialPlayerPosition } from './networking.js';
 
 // Import mobile controls
 import {
@@ -519,9 +519,15 @@ function startGame(username) {
     // Get the selected ship type from the UI manager
     const selectedShipType = uiManager.getSelectedShip();
     console.log(`Starting game with ship: ${selectedShipType}`);
+
+    // Get the initial position from the networking module
+    const initialPosition = getInitialPlayerPosition();
+    if (!initialPosition) {
+        console.warn("Initial position not received from server, using fallback.");
+    }
     
-    // Create player with the selected ship type
-    player = createPlayer(scene, selectedShipType);
+    // Create player with the selected ship type AND initial position
+    player = createPlayer(scene, selectedShipType, initialPosition);
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
     

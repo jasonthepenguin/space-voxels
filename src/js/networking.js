@@ -23,6 +23,9 @@ const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://loca
 
 export let serverTimeOffset = 0;
 
+// Store the initial position received from the server
+let initialPlayerPosition = null;
+
 export function initNetworking(updatePlayerCount, gameScene) {
     scene = gameScene; // Store the scene reference
 
@@ -161,6 +164,14 @@ export function initNetworking(updatePlayerCount, gameScene) {
         }
     });
 
+    // Listen for the initial state provided by the server
+    socket.on('initialState', (data) => {
+        console.log("Received initial state:", data);
+        if (data.position) {
+            initialPlayerPosition = data.position;
+        }
+        // We might also store data.playerId if needed elsewhere, though socket.id should be the same
+    });
 
     // Add a heartbeat mechanism to verify connectivity
     setInterval(() => {
@@ -172,6 +183,11 @@ export function initNetworking(updatePlayerCount, gameScene) {
     }, 5000);
 
     return { socket, playerId: socket.id, isConnected: true };
+}
+
+// Function to get the stored initial position
+export function getInitialPlayerPosition() {
+    return initialPlayerPosition;
 }
 
 // Function to update the player reference when it's created

@@ -155,12 +155,23 @@ io.on('connection', (socket) => {
   // Store player without broadcasting yet
   gameState.players[socket.id] = {
     id: socket.id,
-    position: { x: 0, y: 20, z: 70 },
+    // Generate random initial position
+    position: {
+        x: Math.random() * 150 - 75, // Same range as respawn for consistency
+        y: Math.random() * 50 + 10,
+        z: Math.random() * 150 - 75
+    },
     rotation: { x: 0, y: 0, z: 0 },
     isReady: false,
     shipType: 'default',
     isDead: false
   };
+  
+  // Send the initial state (including random position) back to the connecting client
+  socket.emit('initialState', { 
+    playerId: socket.id, 
+    position: gameState.players[socket.id].position 
+  });
   
   socket.emit('serverTime', { timestamp: Date.now() });
 
