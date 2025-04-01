@@ -1255,37 +1255,54 @@ canvas {
 }
 
 .death-message {
-  font-size: 16px; /* Slightly smaller */
-  color: rgba(255, 240, 240, 0.95); /* Even softer color */
-  margin-bottom: 25px; /* More space below */
+  font-size: 18px; /* Slightly larger font */
+  color: rgba(255, 240, 240, 0.95);
+  margin: 5px 0 25px; /* Better spacing */
   font-style: italic;
-  line-height: 1.5; /* Better readability */
-  padding: 10px 20px; /* Adjust padding for quotes */
-  background-color: rgba(255, 255, 255, 0.03); /* Very subtle background */
-  /* border-left: 3px solid rgba(255, 80, 80, 0.5); */ /* Remove left border */
-  border-radius: 4px;
-  position: relative; /* Needed for pseudo-elements */
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+  line-height: 1.6; /* Improved line height */
+  padding: 15px 25px; /* More padding */
+  background-color: rgba(255, 255, 255, 0.05); /* Slightly lighter background */
+  border-radius: 8px;
+  position: relative;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 15px rgba(255, 100, 100, 0.1); /* Soft inner glow */
+  letter-spacing: 0.5px; /* Improved letter spacing */
 }
 
-/* Add styled quotation marks */
+/* Updated styling for the blue heart emoji */
+.death-message emoji, 
+.death-message .emoji {
+  display: inline-block;
+  font-size: 1.2em;
+  margin-left: 5px;
+  animation: gentle-pulse 2s infinite alternate;
+  text-shadow: 0 0 10px rgba(100, 150, 255, 0.8); /* Blue glow */
+  vertical-align: middle;
+}
+
+@keyframes gentle-pulse {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(1.1); opacity: 1; }
+}
+
+/* Redesign quotation marks for a more peaceful look */
 .death-message::before,
 .death-message::after {
   content: '\"';
   position: absolute;
-  font-size: 3em; /* Larger quote marks */
-  color: rgba(255, 100, 100, 0.3); /* Soft red for quotes */
-  opacity: 0.6;
-  font-family: Georgia, serif; /* More decorative font */
+  font-size: 3.5em; /* Larger quote marks */
+  color: rgba(255, 200, 200, 0.25); /* Softer, more pinkish color */
+  font-family: 'Georgia', serif;
+  line-height: 1;
 }
 
 .death-message::before {
-  top: -5px;
+  top: -10px;
   left: 5px;
 }
 
 .death-message::after {
-  bottom: -15px;
+  bottom: -35px;
   right: 5px;
 }
 
