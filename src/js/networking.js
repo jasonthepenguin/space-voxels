@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-
+import { audioSystem } from './weapons.js';
 
 const MAX_PLAYERS = 50;
 let serverFull = false;
@@ -99,12 +99,18 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
         if (player) {
             player.visible = false;
         }
+        if (audioSystem && audioSystem.isAudioInitialized) {
+            audioSystem.playSound('game_over', { volume: 0.8 });
+        }
     });
 
     socket.on('killConfirmed', (data) => {
         console.log(`Kill confirmed by server! Victim: ${data.victimId}, Points: ${data.points}`);
         if (window.uiManager) {
             window.uiManager.showEliminationMessage(data.points || 100);
+        }
+        if (audioSystem && audioSystem.isAudioInitialized) {
+            audioSystem.playSound('holy_shit', { volume: 0.9 });
         }
     });
 

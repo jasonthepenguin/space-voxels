@@ -96,6 +96,10 @@ import skyboxFrontUrl from '../assets/textures/skybox_front.png';
 import skyboxBackUrl from '../assets/textures/skybox_back.png';
 import laserSoundUrl from '../assets/sounds/laser_sound_3.wav';
 import thrusterSoundUrl from '../assets/sounds/thruster.mp3';
+// *** NEW SOUND IMPORTS ***
+import searchSoundUrl from '../assets/sounds/search.mp3';
+import holyShitSoundUrl from '../assets/sounds/holy_shit.mp3';
+import gameOverSoundUrl from '../assets/sounds/game_over.mp3';
 
 // Game state variables
 let scene, camera, renderer;
@@ -580,7 +584,7 @@ function handleAutoFire(currentTime) {
 }
 
 // New function to start the game
-function startGame(username) {
+async function startGame(username) {
     gameStarted = true;
     
     // Resume audio context on user interaction
@@ -588,9 +592,20 @@ function startGame(username) {
     
     // Load sounds if not already loaded
     if (audioSystem && !audioSystem.isAudioInitialized) {
-        audioSystem.loadSound('laser', laserSoundUrl);
-        // Load thruster sound ***
-        audioSystem.loadSound('thruster', thrusterSoundUrl);
+        // *** MODIFIED: Use Promise.all to wait for sounds ***
+        try {
+            await Promise.all([
+                audioSystem.loadSound('laser', laserSoundUrl),
+                audioSystem.loadSound('thruster', thrusterSoundUrl),
+                audioSystem.loadSound('search', searchSoundUrl), // Ensure search sound is loaded
+                audioSystem.loadSound('holy_shit', holyShitSoundUrl),
+                audioSystem.loadSound('game_over', gameOverSoundUrl)
+            ]);
+            console.log("All necessary sounds loaded.");
+        } catch (error) {
+            console.error("Error loading one or more sounds:", error);
+            // Handle error appropriately, maybe prevent game start or show a message
+        }
     }
     
     // Get the selected ship type from the UI manager
@@ -611,6 +626,11 @@ function startGame(username) {
     // Set player reference in networking module
     setPlayerReference(player, updateCameraPosition);
     
+    // *** NEW: Play spawn sound on initial start ***
+    if (audioSystem && audioSystem.isAudioInitialized) {
+        audioSystem.playSound('search', { volume: 0.7 }); 
+    }
+
     // Show mobile controls if on mobile, otherwise show chat for desktop
     if (isMobile) {
         showMobileControls();
