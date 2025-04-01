@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createPlayer } from './player.js';
+import { audioSystem } from './weapons.js';
 
 
 // Remote players collection
@@ -130,6 +131,11 @@ export function respawnLocalPlayer(player, scene, updateCameraPosition, respawnP
     
     // Set position immediately
     player.position.copy(finalRespawnPosition);
+    
+    // Play spawn sound on respawn
+    if (audioSystem && audioSystem.isAudioInitialized) {
+        audioSystem.playSound('search', { volume: 0.7 });
+    }
     
     // Reset rotation
     player.rotation.set(0, 0, 0);

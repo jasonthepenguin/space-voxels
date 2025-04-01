@@ -1255,10 +1255,38 @@ canvas {
 }
 
 .death-message {
-  font-size: 18px;
-  color: rgba(255, 221, 221, 0.9);
-  margin-bottom: 15px;
+  font-size: 16px; /* Slightly smaller */
+  color: rgba(255, 240, 240, 0.95); /* Even softer color */
+  margin-bottom: 25px; /* More space below */
   font-style: italic;
+  line-height: 1.5; /* Better readability */
+  padding: 10px 20px; /* Adjust padding for quotes */
+  background-color: rgba(255, 255, 255, 0.03); /* Very subtle background */
+  /* border-left: 3px solid rgba(255, 80, 80, 0.5); */ /* Remove left border */
+  border-radius: 4px;
+  position: relative; /* Needed for pseudo-elements */
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+}
+
+/* Add styled quotation marks */
+.death-message::before,
+.death-message::after {
+  content: '\"';
+  position: absolute;
+  font-size: 3em; /* Larger quote marks */
+  color: rgba(255, 100, 100, 0.3); /* Soft red for quotes */
+  opacity: 0.6;
+  font-family: Georgia, serif; /* More decorative font */
+}
+
+.death-message::before {
+  top: -5px;
+  left: 5px;
+}
+
+.death-message::after {
+  bottom: -15px;
+  right: 5px;
 }
 
 .stat-container {
