@@ -71,7 +71,9 @@ import {
     requestRespawn,
     isPlayerDead,
     updateKillCountUI,
-    resetKillCount
+    resetKillCount,
+    setLocalPlayerUsername,
+    updateLocalPlayerKillsInLeaderboard
 } from './networking.js';
 
 import {
@@ -600,6 +602,9 @@ async function startGame(username) {
     resetKillCount();
     updateKillCountUI(0);
     
+    // Set the local player's username for leaderboard
+    setLocalPlayerUsername(username);
+    
     // Resume audio context on user interaction
     resumeAudioContext();
     
@@ -688,6 +693,12 @@ function resetGame() {
         laser.visible = false;
     });
     lasers = [];
+    
+    // Clear leaderboard display
+    const leaderboardList = document.getElementById('leaderboard-list');
+    if (leaderboardList) {
+        leaderboardList.innerHTML = '';
+    }
     
     // Hide mobile controls if on mobile, otherwise hide chat for desktop
     if (isMobile) {

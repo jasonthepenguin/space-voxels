@@ -1486,3 +1486,118 @@ canvas {
     padding: 12px 25px;
   }
 }
+
+/* Leaderboard Styles */
+#leaderboard-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 230px;
+  background: linear-gradient(135deg, rgba(20, 30, 48, 0.9) 0%, rgba(36, 59, 85, 0.9) 100%);
+  border-radius: 8px;
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 100, 255, 0.3);
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  display: none; /* Initially hidden, shown when gameplay starts */
+}
+
+.leaderboard-header {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.leaderboard-header h3 {
+  margin: 0;
+  font-size: 16px;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(0, 150, 255, 0.7);
+}
+
+.leaderboard-body {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.leaderboard-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.leaderboard-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.leaderboard-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 100, 255, 0.5);
+  border-radius: 10px;
+}
+
+#leaderboard-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.leaderboard-item {
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s;
+}
+
+.leaderboard-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.leaderboard-item.self {
+  background-color: rgba(76, 175, 80, 0.2);
+  font-weight: bold;
+}
+
+.leaderboard-rank {
+  flex: 0 0 20px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.leaderboard-username {
+  flex: 1;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 5px;
+}
+
+.leaderboard-kills {
+  flex: 0 0 40px;
+  text-align: right;
+  font-weight: bold;
+  color: #ff5555;
+}
+
+/* Top 3 player highlighting */
+.leaderboard-item:nth-child(1) .leaderboard-rank {
+  color: gold;
+}
+
+.leaderboard-item:nth-child(2) .leaderboard-rank {
+  color: silver;
+}
+
+.leaderboard-item:nth-child(3) .leaderboard-rank {
+  color: #cd7f32; /* bronze */
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  #leaderboard-container {
+    top: 5px;
+    right: 5px;
+    width: 180px;
+    font-size: 14px;
+  }
+}

@@ -143,6 +143,25 @@ function serializeDestroyedVoxels(map) {
     return obj;
 }
 
+// *** NEW: Leaderboard Update Function ***
+function broadcastLeaderboard() {
+  if (getPlayerCount() === 0) return; // Skip if no players
+  
+  // Convert players object to array with id, username, and kills
+  const leaderboardData = Object.entries(gameState.players)
+    .map(([id, player]) => ({
+      id,
+      username: player.username || `Player_${id.substring(0, 5)}`, // Use username if set, otherwise generate one
+      kills: player.kills || 0
+    }))
+    .sort((a, b) => b.kills - a.kills); // Sort by kills (descending)
+  
+  // Broadcast the leaderboard to all players
+  io.to(GLOBAL_ROOM).emit('leaderboardUpdate', leaderboardData);
+  
+  console.log('Broadcasting leaderboard update with', leaderboardData.length, 'players');
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
 
@@ -216,6 +235,12 @@ io.on('connection', (socket) => {
             console.warn(`Player ${socket.id} requested invalid shipType "${requestedShipType}", using default.`);
           }
         }
+        
+        // NEW: Store username if provided
+        if (data?.username && isValidUsername(data.username)) {
+          gameState.players[socket.id].username = data.username;
+          console.log(`Player ${socket.id} username set to ${data.username}`);
+        }
 
         gameState.players[socket.id].isDead = false; // Ensure not dead on ready
 
@@ -231,6 +256,9 @@ io.on('connection', (socket) => {
         });
 
         console.log(`Player ${socket.id} is ready with ship type: ${gameState.players[socket.id].shipType}`);
+        
+        // Update the leaderboard after a player becomes ready
+        broadcastLeaderboard();
       }
     } catch (error) {
       console.error(`Error in playerReady: ${error.message}`);
@@ -280,6 +308,9 @@ io.on('connection', (socket) => {
       // Increment killer's kill count
       killer.kills += 1;
       
+      // Broadcast updated leaderboard after a kill
+      broadcastLeaderboard();
+
       // Find the target's socket
       const targetSocket = io.sockets.sockets.get(targetId);
       
@@ -325,6 +356,9 @@ io.on('connection', (socket) => {
         gameState.players[playerId].rotation = respawnRotation;
         gameState.players[playerId].kills = 0; // Reset kill count on respawn
         
+        // Broadcast updated leaderboard after kill count reset
+        broadcastLeaderboard();
+
         // Send respawn confirmation and position ONLY to the requesting player
         socket.emit('localPlayerRespawn', { 
           position: respawnPosition,
@@ -717,6 +751,9 @@ setInterval(() => {
   if (getPlayerCount() > 0) {
     io.emit('serverTime', { timestamp: Date.now() });
     console.log('Broadcasting server time update.');
+    
+    // Also broadcast leaderboard update on the same interval
+    broadcastLeaderboard();
   } else {
     console.log('Skipping server time update, no players connected.');
   }
