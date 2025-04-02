@@ -362,7 +362,6 @@ canvas {
 }
 #fps-counter,
 #players-counter,
-#ping-counter,
 #kills-counter,
 #respawn-timer {
   position: absolute;
@@ -384,7 +383,6 @@ canvas {
 
 #fps-counter,
 #players-counter,
-#ping-counter,
 #kills-counter,
 #respawn-timer {
   position: relative;
@@ -406,7 +404,6 @@ canvas {
 @media (max-width: 600px) {
   #fps-counter,
   #players-counter,
-  #ping-counter,
   #kills-counter,
   #respawn-timer {
     font-size: 12px;
