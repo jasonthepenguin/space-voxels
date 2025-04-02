@@ -19,6 +19,9 @@ let updateCameraPositionFn = null; // reference to camera position update functi
 let sunRef = null;      // *** NEW: Reference to sun ***
 let planetsRef = null;  // *** NEW: Reference to planets array ***
 let killCount = 0;      // Track local player's kill count
+let playerAliveTime = 0; // Track player's alive time in seconds
+let aliveStartTime = 0;  // Track when player spawned/started
+let aliveTimerInterval = null; // Timer interval reference
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
 
@@ -95,11 +98,15 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
         console.log("Received playerDied event from server. Showing death screen.");
         playerIsDead = true;
         
-        // Update death screen with final kill count
+        // Stop the alive timer
+        stopAliveTimer();
+        
+        // Update death screen with final kill count and alive time
         const finalKills = data ? data.finalKills || killCount : killCount;
+        const aliveTimeString = formatTime(playerAliveTime);
         
         if (window.uiManager) {
-            window.uiManager.showDeathScreen(finalKills);
+            window.uiManager.showDeathScreen(finalKills, aliveTimeString);
         }
         if (player) {
             player.visible = false;
@@ -132,6 +139,9 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
             // Reset kill count on respawn
             killCount = 0;
             updateKillCountUI(0);
+            
+            // Restart the alive timer
+            startAliveTimer();
             
             respawnLocalPlayer(player, scene, updateCameraPositionFn, data.position, true); 
             playerIsDead = false;
@@ -244,4 +254,46 @@ export function getKillCount() {
 export function resetKillCount() {
     killCount = 0;
     updateKillCountUI(0);
+}
+
+// Add this function to start tracking alive time
+export function startAliveTimer() {
+    // Reset timer values
+    playerAliveTime = 0;
+    aliveStartTime = Date.now();
+    
+    // Clear any existing interval
+    if (aliveTimerInterval) clearInterval(aliveTimerInterval);
+    
+    // Update every second
+    aliveTimerInterval = setInterval(() => {
+        playerAliveTime = Math.floor((Date.now() - aliveStartTime) / 1000);
+        updateAliveTimeUI(formatTime(playerAliveTime));
+    }, 1000);
+}
+
+// Add this function to stop the timer
+export function stopAliveTimer() {
+    if (aliveTimerInterval) {
+        clearInterval(aliveTimerInterval);
+        aliveTimerInterval = null;
+    }
+}
+
+// Format seconds into MM:SS
+export function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Update the UI with the current alive time
+export function updateAliveTimeUI(timeString) {
+    const elem = document.getElementById('alive-timer');
+    if (elem) elem.textContent = `Alive: ${timeString}`;
+}
+
+// Get the current alive time (formatted)
+export function getAliveTime() {
+    return formatTime(playerAliveTime);
 }

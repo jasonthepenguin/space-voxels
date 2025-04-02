@@ -648,7 +648,7 @@ class UIManager {
     }
 
     // Show the death screen
-    showDeathScreen(finalKills = 0) {
+    showDeathScreen(finalKills = 0, aliveTime = "00:00") {
         this.changeState(GameState.DEAD);
         
         // Update the kills display on the death screen
@@ -657,12 +657,10 @@ class UIManager {
             deathKillsElement.textContent = finalKills.toString();
         }
         
-        // Calculate time alive (if we had that tracking)
-        // For now, just displaying a placeholder
+        // Display time alive
         const deathTimeElement = document.getElementById('death-time');
         if (deathTimeElement) {
-            // Could replace with actual time tracking if implemented
-            deathTimeElement.textContent = "N/A";
+            deathTimeElement.textContent = aliveTime;
         }
     }
 
