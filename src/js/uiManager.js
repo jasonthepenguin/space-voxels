@@ -496,7 +496,7 @@ class UIManager {
         // Create message element
         const messageElement = document.createElement('div');
         messageElement.className = 'elimination-message';
-        messageElement.innerHTML = `<span>Player Molested!</span> <span class="points">+${points}</span>`;
+        messageElement.innerHTML = `<span>Player Eliminated!</span> <span class="points">+${points}</span>`;
         
         // Add to container
         this.eliminationContainer.appendChild(messageElement);
