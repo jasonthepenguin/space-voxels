@@ -273,76 +273,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('playerDied', (data) => {
-    try {
-      const killerId = socket.id;
-      
-      // --- Sanity Checks ---
-      // 1. Validate targetId type and existence
-      if (!data || typeof data.targetId !== 'string' || data.targetId === '') {
-        console.warn(`Invalid targetId received from ${killerId}:`, data);
-        return; 
-      }
-      const targetId = data.targetId;
-
-      // 4. Prevent self-kill reports via this event
-      if (killerId === targetId) {
-        console.warn(`Player ${killerId} attempted to report self-kill via playerDied event.`);
-        return;
-      }
-
-      // 2. Validate Killer State
-      const killer = gameState.players[killerId];
-      if (!killer || !killer.isReady || killer.isDead) {
-        console.warn(`Invalid killer state for ${killerId} reporting kill on ${targetId}. Ready: ${killer?.isReady}, Dead: ${killer?.isDead}`);
-        return;
-      }
-
-      // Get target player state AFTER basic checks
-      const target = gameState.players[targetId];
-
-      // 1. (Continued) & 3. Validate Target State (Exists, Ready, Not Already Dead)
-      if (!target || !target.isReady || target.isDead) {
-        console.log(`Invalid target ${targetId} or target state. Exists: ${!!target}, Ready: ${target?.isReady}, Dead: ${target?.isDead}`);
-        return; 
-      }
-      // --- End Sanity Checks ---
-
-      console.log(`Processing valid playerDied event from ${killerId} targeting ${targetId}`);
-
-      // Mark the target player as dead (passed all checks)
-      target.isDead = true;
-      
-      // Increment killer's kill count
-      killer.kills += 1;
-      
-      // Broadcast updated leaderboard after a kill
-      broadcastLeaderboard();
-
-      // Find the target's socket
-      const targetSocket = io.sockets.sockets.get(targetId);
-      
-      if (targetSocket) {
-        // Notify ONLY the target player that they died
-        targetSocket.emit('playerDied', { finalKills: target.kills }); // Send final kill count
-        console.log(`Sent 'playerDied' event to target ${targetId}`);
-      } else {
-        console.log(`Target player ${targetId} socket not found, but marked as dead.`);
-      }
-
-      io.to(GLOBAL_ROOM).emit('playerHit', { targetId: targetId });
-      console.log(`Broadcasted 'playerHit' for target ${targetId} to all clients.`);
-
-      // Optional: Broadcast elimination info to everyone (for kill feeds etc.)
-      // io.to(GLOBAL_ROOM).emit('playerEliminated', { killerId: killerId, victimId: targetId });
-
-    } catch (error) {
-      console.error(`Error in playerDied handler: ${error.message}`, error.stack);
-    }
-  });
-
-   // NEW: Handle respawn requests
-   socket.on('requestRespawn', () => {
+  // Handle respawn requests
+  socket.on('requestRespawn', () => {
     try {
       const playerId = socket.id;
       console.log(`Received requestRespawn from ${playerId}`);

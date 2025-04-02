@@ -110,9 +110,7 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
     
     socket.on('playerHit', (data) => {
         console.log(`Received playerHit event for: ${data.targetId}, our ID: ${socket.id}`);
-        if (data.targetId === socket.id) {
-            console.log("Server confirmed we were hit!");
-        } else {
+        if (data.targetId !== socket.id) {
             console.log(`Remote player ${data.targetId} was hit (server confirmed), hiding them.`);
             hideRemotePlayerTemporarily(data.targetId);
         }
