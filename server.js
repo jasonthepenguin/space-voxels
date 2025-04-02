@@ -173,7 +173,8 @@ io.on('connection', (socket) => {
     rotation: { x: 0, y: 0, z: 0 },
     isReady: false,
     shipType: 'default',
-    isDead: false
+    isDead: false,
+    kills: 0 // Add kill counter initialized to 0
   };
   
   // Send the initial state (including random position) back to the connecting client
@@ -276,12 +277,15 @@ io.on('connection', (socket) => {
       // Mark the target player as dead (passed all checks)
       target.isDead = true;
       
+      // Increment killer's kill count
+      killer.kills += 1;
+      
       // Find the target's socket
       const targetSocket = io.sockets.sockets.get(targetId);
       
       if (targetSocket) {
         // Notify ONLY the target player that they died
-        targetSocket.emit('playerDied');
+        targetSocket.emit('playerDied', { finalKills: target.kills }); // Send final kill count
         console.log(`Sent 'playerDied' event to target ${targetId}`);
       } else {
         console.log(`Target player ${targetId} socket not found, but marked as dead.`);
@@ -319,9 +323,13 @@ io.on('connection', (socket) => {
         gameState.players[playerId].isDead = false;
         gameState.players[playerId].position = respawnPosition;
         gameState.players[playerId].rotation = respawnRotation;
+        gameState.players[playerId].kills = 0; // Reset kill count on respawn
         
         // Send respawn confirmation and position ONLY to the requesting player
-        socket.emit('localPlayerRespawn', { position: respawnPosition });
+        socket.emit('localPlayerRespawn', { 
+          position: respawnPosition,
+          kills: 0 // Send reset kill count
+        });
         console.log(`Sent localPlayerRespawn to ${playerId} at`, respawnPosition);
 
         // Notify other players that this player has respawned/moved
@@ -631,10 +639,17 @@ io.on('connection', (socket) => {
           // Remove target's hitbox from checks (using the GLOBAL function)
           removePlayerHitSphere(hitPlayerId);
 
+          // Get target's final kill count before they die
+          const targetFinalKills = gameState.players[hitPlayerId].kills || 0;
+
+          // Increment shooter's kill count
+          gameState.players[shooterId].kills = (gameState.players[shooterId].kills || 0) + 1;
+          const shooterKills = gameState.players[shooterId].kills;
+
           // Notify the target player they died
           const targetSocket = io.sockets.sockets.get(hitPlayerId);
           if (targetSocket) {
-              targetSocket.emit('playerDied'); // Tell the client to show death screen
+              targetSocket.emit('playerDied', { finalKills: targetFinalKills }); // Include final kill count
               console.log(`Sent 'playerDied' to target ${hitPlayerId}`);
           }
 
@@ -645,9 +660,13 @@ io.on('connection', (socket) => {
           // *** NEW: Notify the SHOOTER they got the kill ***
           const shooterSocket = io.sockets.sockets.get(shooterId);
           if (shooterSocket) {
-              // You can include details like points awarded, victim's name, etc.
-              shooterSocket.emit('killConfirmed', { victimId: hitPlayerId, points: 100 });
-              console.log(`Sent 'killConfirmed' to shooter ${shooterId}`);
+              // Include updated kill count
+              shooterSocket.emit('killConfirmed', { 
+                  victimId: hitPlayerId, 
+                  points: 100,
+                  kills: shooterKills
+              });
+              console.log(`Sent 'killConfirmed' to shooter ${shooterId} with kill count: ${shooterKills}`);
           }
 
       } else {

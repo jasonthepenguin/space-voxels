@@ -35,6 +35,7 @@ class UIManager {
         this.resumeOverlayElement = document.getElementById('resume-overlay');
         this.mobileControlsElement = document.getElementById('mobile-controls');
         this.deathScreenElement = document.getElementById('death-screen');
+        this.killsCounterElement = document.getElementById('kills-counter');
         
         // Buttons
         this.startButton = document.getElementById('start-button');
@@ -135,6 +136,7 @@ class UIManager {
         this.shipSelectorElement.style.display = 'none';
         this.crosshairElement.style.display = 'none';
         this.playersCounterElement.style.display = 'none';
+        this.killsCounterElement.style.display = 'none';
         if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
         if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
         if (this.deathScreenElement) this.deathScreenElement.style.display = 'none';
@@ -189,6 +191,7 @@ class UIManager {
                 this.shipSelectorElement.style.display = 'none';
                 this.crosshairElement.style.display = 'block';
                 this.playersCounterElement.style.display = 'block';
+                this.killsCounterElement.style.display = 'block';
                 if (this.resumeOverlayElement) {
                     this.resumeOverlayElement.style.display = 'none';
                 }
@@ -496,7 +499,7 @@ class UIManager {
         // Create message element
         const messageElement = document.createElement('div');
         messageElement.className = 'elimination-message';
-        messageElement.innerHTML = `<span>Player Molested!</span> <span class="points">+${points}</span>`;
+        messageElement.innerHTML = `<span>Player Eliminated!</span> <span class="points">+${points}</span>`;
         
         // Add to container
         this.eliminationContainer.appendChild(messageElement);
@@ -645,8 +648,22 @@ class UIManager {
     }
 
     // Show the death screen
-    showDeathScreen() {
+    showDeathScreen(finalKills = 0) {
         this.changeState(GameState.DEAD);
+        
+        // Update the kills display on the death screen
+        const deathKillsElement = document.getElementById('death-kills');
+        if (deathKillsElement) {
+            deathKillsElement.textContent = finalKills.toString();
+        }
+        
+        // Calculate time alive (if we had that tracking)
+        // For now, just displaying a placeholder
+        const deathTimeElement = document.getElementById('death-time');
+        if (deathTimeElement) {
+            // Could replace with actual time tracking if implemented
+            deathTimeElement.textContent = "N/A";
+        }
     }
 
     // Hide the death screen
@@ -654,6 +671,13 @@ class UIManager {
         if (this.currentState === GameState.DEAD) {
             // Transition back to PLAYING state after respawn
             this.changeState(GameState.PLAYING);
+        }
+    }
+
+    // Update kills count in UI
+    updateKillsCounter(count) {
+        if (this.killsCounterElement) {
+            this.killsCounterElement.textContent = `Kills: ${count}`;
         }
     }
 }

@@ -88,8 +88,13 @@
   </div>
   
   <div id="crosshair"></div>
-  <div id="fps-counter">FPS: 0</div>
-  <div id="players-counter">Players Online: 1</div>
+
+  <div id="top-left-stats">
+    <div id="fps-counter">FPS: 0</div>
+    <div id="players-counter">Players Online: 1</div>
+    <div id="kills-counter">Kills: 0</div>
+  </div>
+
   
   <!-- Chat UI for desktop -->
   <div id="chat-container">
@@ -129,10 +134,6 @@
       <div class="death-stats">
         <p class="death-message">"The pain of parting is nothing to the joy of meeting again." – Charles Dickens 💙</p>
         <div class="stat-container">
-          <div class="stat">
-            <span class="stat-label">Score</span>
-            <span class="stat-value" id="death-score">0</span>
-          </div>
           <div class="stat">
             <span class="stat-label">Kills</span>
             <span class="stat-value" id="death-kills">0</span>

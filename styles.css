@@ -360,29 +360,58 @@ canvas {
 #crosshair::after {
   transform: translateX(-50%) rotate(-45deg);
 }
-#fps-counter {
+#fps-counter,
+#players-counter,
+#kills-counter {
+  position: absolute;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 14px;
+  z-index: 100;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 0 10px rgba(0, 0, 255, 0.3);
+  border: 1px solid rgba(100, 149, 237, 0.3);
+  transition: all 0.2s ease;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 5px rgba(0, 150, 255, 0.7);
+}
+
+
+#fps-counter,
+#players-counter,
+#kills-counter {
+  position: relative;
+  left: 0;
+  top: unset;
+}
+
+#top-left-stats {
   position: absolute;
   top: 10px;
   left: 10px;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 3px;
-  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   z-index: 100;
 }
-#players-counter {
-  position: absolute;
-  top: 40px;
-  left: 10px;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 3px;
-  font-size: 14px;
-  z-index: 100;
-  display: none;
+
+/* Add this for improved mobile layout */
+@media (max-width: 600px) {
+  #fps-counter,
+  #players-counter,
+  #kills-counter,
+
+  #top-left-stats {
+    gap: 4px;
+    top: 5px;
+    left: 5px;
+  }
+  
 }
+
 /* Mobile controls */
 #mobile-controls {
   position: absolute;
@@ -476,6 +505,17 @@ canvas {
 
 #mobile-boost-button::after {
   content: 'HOLD';
+}
+
+
+#top-left-stats {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
 }
 
 /* Media queries to adjust mobile controls for different screen sizes */
