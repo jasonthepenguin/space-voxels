@@ -1446,3 +1446,28 @@ canvas {
     padding: 12px 25px;
   }
 }
+
+#ping-counter,
+#kills-counter,
+#respawn-timer {
+  position: absolute;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 14px;
+  z-index: 100;
+}
+
+#ping-counter {
+  top: 70px;
+}
+
+#kills-counter {
+  top: 100px;
+}
+
+#respawn-timer {
+  top: 130px;
+}
