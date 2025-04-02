@@ -282,96 +282,127 @@ function createFlowersShip(player) {
     player.add(gun);
 }
 
-// Angel Ship (now made of blocks instead of curved shapes)
+// Angel Ship (Redesigned for a sleeker look)
 function createAngelShip(player) {
     // Materials
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xf0f0f0 }); // White body
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xf5f5f5,
+        metalness: 0.3, 
+        roughness: 0.5 
+    }); 
     const wingMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xffffff,
         transparent: true,
-        opacity: 0.7
+        opacity: 0.5,
+        side: THREE.DoubleSide 
     });
-    const accentMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700 }); // Gold accents
+    const accentMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffe799,
+        metalness: 0.9,
+        roughness: 0.2 
+    }); 
     const cockpitMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xe6e6fa, 
+        color: 0xaaddff,
         transparent: true, 
-        opacity: 0.8
+        opacity: 0.4,
+        metalness: 0.2,
+        roughness: 0.1
     });
-    
-    // Main body - now a box instead of cylinder
-    const bodyGeometry = new THREE.BoxGeometry(1.6, 1, 4);
+
+    // Main body
+    const bodyGeometry = new THREE.BoxGeometry(1.2, 0.6, 5.2);
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = -0.1;
     player.add(body);
-    
-    // Cockpit - now a box instead of sphere
-    const cockpitGeometry = new THREE.BoxGeometry(1.4, 0.8, 1.4);
+
+    // Cockpit
+    const cockpitGeometry = new THREE.BoxGeometry(1.1, 0.5, 1.4); 
     const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
-    cockpit.position.set(0, 0.8, -1);
+    cockpit.position.set(0, 0.45, -1.6);
     player.add(cockpit);
-    
-    // Angel wings - now made of multiple boxes
-    // Left wing
-    createBlockWing(player, -1, 0, 0, wingMaterial, true);
-    
-    // Right wing
-    createBlockWing(player, 1, 0, 0, wingMaterial, false);
-    
-    // Halo - now a square frame made of small boxes
-    const haloSize = 0.5;
-    const haloThickness = 0.1;
-    
-    // Create a square halo with 8 small boxes
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const haloPartGeometry = new THREE.BoxGeometry(haloThickness, haloThickness, haloThickness);
-        const haloPart = new THREE.Mesh(haloPartGeometry, accentMaterial);
-        
-        haloPart.position.set(
-            Math.sin(angle) * haloSize,
-            1 + Math.cos(angle) * haloSize,
-            -0.5
-        );
-        player.add(haloPart);
-    }
-    
-    // Tail feathers - now a box arrangement
-    const tailGeometry = new THREE.BoxGeometry(1.6, 0.4, 2);
-    const tail = new THREE.Mesh(tailGeometry, wingMaterial);
-    tail.position.set(0, 0, 2);
-    player.add(tail);
-    
-    // Additional tail detail
-    const tailTipGeometry = new THREE.BoxGeometry(0.8, 0.2, 0.8);
-    const tailTip = new THREE.Mesh(tailTipGeometry, wingMaterial);
-    tailTip.position.set(0, 0, 3);
-    player.add(tailTip);
-    
-    // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
-    const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
+
+    // *** New: Sharper nose section ***
+    const noseGeometry = new THREE.BoxGeometry(0.6, 0.3, 1.2);
+    const nose = new THREE.Mesh(noseGeometry, bodyMaterial);
+    nose.position.set(0, 0.2, -2.4);
+    player.add(nose);
+
+    const noseTipGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.6);
+    const noseTip = new THREE.Mesh(noseTipGeometry, accentMaterial);
+    noseTip.position.set(0, 0.1, -2.9);
+    player.add(noseTip);
+
+    // Wings
+    const wingSegmentHeight = 0.06;
+    const wingBaseWidth = 3.8;
+    const wingTipWidth = 1.2;
+    const wingLength = 2.2;
+    const wingSweepAngleBase = Math.PI / 5;
+
+    const createWingSegment = (xOffset, yOffset, zOffset, width, length, angleY, angleZ, material) => {
+        const geom = new THREE.BoxGeometry(width, wingSegmentHeight, length);
+        const mesh = new THREE.Mesh(geom, material);
+        mesh.position.set(xOffset, yOffset, zOffset);
+        mesh.rotation.y = angleY;
+        mesh.rotation.z = angleZ;
+        return mesh;
+    };
+
+    const leftWingGroup = new THREE.Group();
+    leftWingGroup.position.set(-0.7, 0, 0);
+    leftWingGroup.add(createWingSegment(-1.8, 0.15, 0, 3.8, 2.2, wingSweepAngleBase, Math.PI / 14, wingMaterial));
+    leftWingGroup.add(createWingSegment(-2.4, 0.0, 0.6, 2.8, 2.4, wingSweepAngleBase * 1.2, Math.PI / 18, wingMaterial));
+    leftWingGroup.add(createWingSegment(-3.0, -0.15, 1.2, 1.2, 2.0, wingSweepAngleBase * 1.4, Math.PI / 24, wingMaterial));
+    player.add(leftWingGroup);
+
+    const rightWingGroup = new THREE.Group();
+    rightWingGroup.position.set(0.7, 0, 0);
+    rightWingGroup.add(createWingSegment(1.8, 0.15, 0, 3.8, 2.2, -wingSweepAngleBase, -Math.PI / 14, wingMaterial));
+    rightWingGroup.add(createWingSegment(2.4, 0.0, 0.6, 2.8, 2.4, -wingSweepAngleBase * 1.2, -Math.PI / 18, wingMaterial));
+    rightWingGroup.add(createWingSegment(3.0, -0.15, 1.2, 1.2, 2.0, -wingSweepAngleBase * 1.4, -Math.PI / 24, wingMaterial));
+    player.add(rightWingGroup);
+
+    // Halo
+    const haloGeometry = new THREE.TorusGeometry(0.9, 0.06, 16, 100);
+    const halo = new THREE.Mesh(haloGeometry, accentMaterial);
+    halo.position.set(0, 1.1, -2.0);
+    halo.rotation.x = Math.PI / 5;
+    player.add(halo);
+
+    // Tail
+    const tailFinGeometry = new THREE.BoxGeometry(0.15, 1.6, 1.6);
+    const tailFin = new THREE.Mesh(tailFinGeometry, bodyMaterial);
+    tailFin.position.set(0, 0.5, 2.6);
+    tailFin.rotation.x = -Math.PI / 18;
+    player.add(tailFin);
+
+    const hStabGeom = new THREE.BoxGeometry(1.6, 0.1, 0.5);
+    const leftStab = new THREE.Mesh(hStabGeom, accentMaterial);
+    leftStab.position.set(-0.8, 0, 2.4);
+    leftStab.rotation.y = -Math.PI / 14;
+    player.add(leftStab);
+
+    const rightStab = new THREE.Mesh(hStabGeom, accentMaterial);
+    rightStab.position.set(0.8, 0, 2.4);
+    rightStab.rotation.y = Math.PI / 14;
+    player.add(rightStab);
+
+    // Engine glow
+    const exhaustGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.3);
+    const exhaustMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffddaa, 
+        emissive: 0xffddaa,
+        emissiveIntensity: 1.2
+    });
+    const exhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+    exhaust.position.set(0, -0.2, 3.0);
+    player.add(exhaust);
+
+    // Forward gun (unchanged)
+    const gunGeometry = new THREE.BoxGeometry(0.3, 0.3, 1.8);
     const gun = new THREE.Mesh(gunGeometry, accentMaterial);
     gun.position.set(0, 0, -2.5);
     player.add(gun);
-}
-
-// Helper function to create block-based wings
-function createBlockWing(player, xPos, yPos, zPos, material, isLeft) {
-    // Main wing section
-    const wingMainGeometry = new THREE.BoxGeometry(0.2, 0.8, 3);
-    const wingMain = new THREE.Mesh(wingMainGeometry, material);
-    wingMain.position.set(xPos * 2, yPos, zPos);
-    player.add(wingMain);
-    
-    // Wing tip section
-    const wingTipGeometry = new THREE.BoxGeometry(0.2, 1.2, 1.5);
-    const wingTip = new THREE.Mesh(wingTipGeometry, material);
-    wingTip.position.set(xPos * 3, yPos, zPos - 0.5);
-    player.add(wingTip);
-    
-    // Wing connector
-    const wingConnectorGeometry = new THREE.BoxGeometry(xPos * 2, 0.2, 0.8);
-    const wingConnector = new THREE.Mesh(wingConnectorGeometry, material);
-    wingConnector.position.set(xPos, yPos, zPos);
-    player.add(wingConnector);
 }
 
 // Chris Ship (Star Wars X-Wing Inspired Design)
