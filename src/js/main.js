@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import uiManager, { GameState } from './uiManager.js';
 import { io } from 'socket.io-client';
-import { serverTimeOffset, getInitialPlayerPosition } from './networking.js';
+import { serverTimeOffset, getInitialPlayerPosition, startAliveTimer } from './networking.js';
 
 // Import mobile controls
 import {
@@ -635,6 +635,9 @@ async function startGame(username) {
     player = createPlayer(scene, selectedShipType, initialPosition);
     cameraOffset.angles = { yaw: 0, pitch: 0 };
     updateCameraPosition();
+    
+    // Start the alive timer for the player
+    startAliveTimer();
     
     // Set player reference in networking module
     setPlayerReference(player, updateCameraPosition);
