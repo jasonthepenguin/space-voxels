@@ -413,12 +413,13 @@ canvas {
     padding: 4px 8px;
     left: 5px;
   }
+
+  #top-left-stats {
+    gap: 4px;
+    top: 5px;
+    left: 5px;
+  }
   
-  #fps-counter { top: 5px; }
-  #players-counter { top: 32px; }
-  #ping-counter { top: 59px; }
-  #kills-counter { top: 86px; }
-  #respawn-timer { top: 113px; }
 }
 
 /* Mobile controls */
