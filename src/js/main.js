@@ -241,6 +241,9 @@ function init() {
     flashPool = weaponSystems.flashPool;
     raycaster = weaponSystems.raycaster;
 
+    // Initialize audio system early
+    audioSystem = initAudioSystem();
+
     // Create sun
     sun = createSun(scene, voxelGeometry);
 
@@ -368,9 +371,6 @@ function init() {
     
     // Start animation loop
     animate();
-    
-    // Initialize audio system instead of preloading sounds
-    audioSystem = initAudioSystem();
     
     console.log("Game initialized successfully");
     console.log("Mobile device detected:", isMobile);
@@ -737,22 +737,5 @@ function updateFOV(delta, boostActive) {
 function resumeAudioContext() {
     if (audioSystem && audioSystem.audioContext.state === 'suspended') {
         audioSystem.audioContext.resume();
-    }
-}
-
-// Helper function to load game sounds
-function loadGameSounds() {
-    if (audioSystem) {
-        Promise.all([
-            audioSystem.loadSound('laser', laserSoundUrl),
-            audioSystem.loadSound('thruster', thrusterSoundUrl),
-            audioSystem.loadSound('search', searchSoundUrl),
-            audioSystem.loadSound('holy_shit', holyShitSoundUrl),
-            audioSystem.loadSound('game_over', gameOverSoundUrl)
-        ]).then(() => {
-            console.log("All game sounds loaded successfully");
-        }).catch(error => {
-            console.error("Error loading game sounds:", error);
-        });
     }
 }
