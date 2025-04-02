@@ -1622,3 +1622,24 @@ canvas {
   user-select: none;
   z-index: 10;
 }
+
+.diagonal-banner {
+  position: absolute;
+  top: 150px;
+  left: -100px; /* Shift left slightly for better positioning */
+  background: linear-gradient(135deg, #ff007f, #9c27b0);
+  color: white;
+  padding: 8px 50px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(0,0,0,0.4);
+  z-index: 200; /* Ensures it's above other UI */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  pointer-events: none; /* Makes the element non-interactive */
+  user-select: none; /* Prevents text selection */
+  transform-origin: top left;
+  transform: rotate(-45deg);
+}
