@@ -648,8 +648,22 @@ class UIManager {
     }
 
     // Show the death screen
-    showDeathScreen() {
+    showDeathScreen(finalKills = 0) {
         this.changeState(GameState.DEAD);
+        
+        // Update the kills display on the death screen
+        const deathKillsElement = document.getElementById('death-kills');
+        if (deathKillsElement) {
+            deathKillsElement.textContent = finalKills.toString();
+        }
+        
+        // Calculate time alive (if we had that tracking)
+        // For now, just displaying a placeholder
+        const deathTimeElement = document.getElementById('death-time');
+        if (deathTimeElement) {
+            // Could replace with actual time tracking if implemented
+            deathTimeElement.textContent = "N/A";
+        }
     }
 
     // Hide the death screen
@@ -657,6 +671,13 @@ class UIManager {
         if (this.currentState === GameState.DEAD) {
             // Transition back to PLAYING state after respawn
             this.changeState(GameState.PLAYING);
+        }
+    }
+
+    // Update kills count in UI
+    updateKillsCounter(count) {
+        if (this.killsCounterElement) {
+            this.killsCounterElement.textContent = `Kills: ${count}`;
         }
     }
 }

@@ -18,6 +18,7 @@ let playerIsDead = false; // Track player death state
 let updateCameraPositionFn = null; // reference to camera position update function
 let sunRef = null;      // *** NEW: Reference to sun ***
 let planetsRef = null;  // *** NEW: Reference to planets array ***
+let killCount = 0;      // Track local player's kill count
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3000';
 
@@ -90,11 +91,15 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
         }
     });
 
-    socket.on('playerDied', () => {
+    socket.on('playerDied', (data) => {
         console.log("Received playerDied event from server. Showing death screen.");
         playerIsDead = true;
+        
+        // Update death screen with final kill count
+        const finalKills = data ? data.finalKills || killCount : killCount;
+        
         if (window.uiManager) {
-            window.uiManager.showDeathScreen();
+            window.uiManager.showDeathScreen(finalKills);
         }
         if (player) {
             player.visible = false;
@@ -105,7 +110,14 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
     });
 
     socket.on('killConfirmed', (data) => {
-        console.log(`Kill confirmed by server! Victim: ${data.victimId}, Points: ${data.points}`);
+        console.log(`Kill confirmed by server! Victim: ${data.victimId}, Points: ${data.points}, Kills: ${data.kills}`);
+        
+        // Update local kill count
+        killCount = data.kills || (killCount + 1);
+        
+        // Update UI with new kill count
+        updateKillCountUI(killCount);
+        
         if (window.uiManager) {
             window.uiManager.showEliminationMessage(data.points || 100);
         }
@@ -117,6 +129,10 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
     socket.on('localPlayerRespawn', (data) => { 
         console.log("Received localPlayerRespawn event with position:", data.position);
         if (player && playerIsDead) {
+            // Reset kill count on respawn
+            killCount = 0;
+            updateKillCountUI(0);
+            
             respawnLocalPlayer(player, scene, updateCameraPositionFn, data.position, true); 
             playerIsDead = false;
             if (window.uiManager) {
@@ -209,4 +225,23 @@ export function setPlayerDeadState(isDead) {
     } else if (!isDead && window.uiManager) {
         window.uiManager.hideDeathScreen();
     }
+}
+
+export function updateKillCountUI(count) {
+    const elem = document.getElementById('kills-counter');
+    if (elem) elem.textContent = `Kills: ${count}`;
+    
+    // Also update kills on death screen if visible
+    const deathKillsElem = document.getElementById('death-kills');
+    if (deathKillsElem) deathKillsElem.textContent = count.toString();
+}
+
+export function getKillCount() {
+    return killCount;
+}
+
+// Used for respawn to reset kill count
+export function resetKillCount() {
+    killCount = 0;
+    updateKillCountUI(0);
 }
