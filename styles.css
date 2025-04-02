@@ -362,8 +362,7 @@ canvas {
 }
 #fps-counter,
 #players-counter,
-#kills-counter,
-#respawn-timer {
+#kills-counter {
   position: absolute;
   left: 10px;
   background-color: rgba(0, 0, 0, 0.5);
@@ -383,8 +382,7 @@ canvas {
 
 #fps-counter,
 #players-counter,
-#kills-counter,
-#respawn-timer {
+#kills-counter {
   position: relative;
   left: 0;
   top: unset;
@@ -405,11 +403,6 @@ canvas {
   #fps-counter,
   #players-counter,
   #kills-counter,
-  #respawn-timer {
-    font-size: 12px;
-    padding: 4px 8px;
-    left: 5px;
-  }
 
   #top-left-stats {
     gap: 4px;

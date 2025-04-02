@@ -36,7 +36,6 @@ class UIManager {
         this.mobileControlsElement = document.getElementById('mobile-controls');
         this.deathScreenElement = document.getElementById('death-screen');
         this.killsCounterElement = document.getElementById('kills-counter');
-        this.respawnTimerElement = document.getElementById('respawn-timer');
         
         // Buttons
         this.startButton = document.getElementById('start-button');
@@ -138,7 +137,6 @@ class UIManager {
         this.crosshairElement.style.display = 'none';
         this.playersCounterElement.style.display = 'none';
         this.killsCounterElement.style.display = 'none';
-        this.respawnTimerElement.style.display = 'none';
         if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
         if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
         if (this.deathScreenElement) this.deathScreenElement.style.display = 'none';
@@ -194,7 +192,6 @@ class UIManager {
                 this.crosshairElement.style.display = 'block';
                 this.playersCounterElement.style.display = 'block';
                 this.killsCounterElement.style.display = 'block';
-                this.respawnTimerElement.style.display = 'block';
                 if (this.resumeOverlayElement) {
                     this.resumeOverlayElement.style.display = 'none';
                 }
