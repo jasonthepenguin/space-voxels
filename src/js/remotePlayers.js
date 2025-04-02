@@ -6,8 +6,52 @@ import { audioSystem } from './weapons.js';
 // Remote players collection
 const remotePlayers = {};
 
-// Add or update a remote player
+// Create a text sprite for player username
+function createUsernameLabel(username) {
+    // Create canvas for the text
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 64;
+    
+    // Clear the canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Set text styles
+    context.font = 'Bold 70px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    
+    // Add a black outline/shadow for better visibility
+    context.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    context.lineWidth = 4;
+    context.strokeText(username, 128, 32);
+    
+    // Draw the text in white
+    context.fillStyle = 'rgba(255, 255, 255, 1.0)';
+    context.fillText(username, 128, 32);
+    
+    // Create texture from canvas
+    const texture = new THREE.CanvasTexture(canvas);
+    
+    // Create sprite material
+    const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.1
+    });
+    
+    // Create sprite
+    const sprite = new THREE.Sprite(material);
+    
+    // Scale based on text length (wider for longer names)
+    const nameScale = Math.max(4, Math.min(6, username.length * 0.4));
+    sprite.scale.set(nameScale, 1, 1);
+    
+    return sprite;
+}
 
+// Add or update a remote player
 export function addOrUpdateRemotePlayer(scene, id, data)
 {
     if(!remotePlayers[id])
@@ -32,7 +76,16 @@ export function addOrUpdateRemotePlayer(scene, id, data)
             data.rotation.y,
             data.rotation.z
         );
-        console.log(`Created remote player: ${id}`);
+        
+        // Add username label
+        // Determine username - use provided username or fallback to ID-based name
+        const username = data.username || `Player_${id.substring(0, 5)}`;
+        const usernameLabel = createUsernameLabel(username);
+        usernameLabel.position.set(0, 3, 0); // Position above the ship
+        remotePlayer.add(usernameLabel);
+        remotePlayer.userData.usernameLabel = usernameLabel;
+        
+        console.log(`Created remote player: ${id} with username: ${username}`);
 
     } else {
         // Update target positions/rotations for interpolation
@@ -48,6 +101,24 @@ export function addOrUpdateRemotePlayer(scene, id, data)
                 data.rotation.y,
                 data.rotation.z
             );
+            
+            // Update username if provided and different from current
+            if (data.username && remotePlayers[id].userData.usernameLabel) {
+                const currentLabel = remotePlayers[id].userData.usernameLabel;
+                const currentMaterial = currentLabel.material;
+                const currentTexture = currentMaterial.map;
+                
+                // Check if username needs updating (we don't have direct access to stored username)
+                // This is a simple approach - updating on any username presence in data
+                if (data.username) {
+                    // Replace the label with a new one
+                    remotePlayers[id].remove(currentLabel);
+                    const newLabel = createUsernameLabel(data.username);
+                    newLabel.position.set(0, 3, 0);
+                    remotePlayers[id].add(newLabel);
+                    remotePlayers[id].userData.usernameLabel = newLabel;
+                }
+            }
         }
     }
 }
@@ -83,6 +154,27 @@ export function getRemotePlayer(id) {
 // Get all remote players
 export function getAllRemotePlayers() {
     return remotePlayers;
+}
+
+// Make username labels always face the camera
+export function updateUsernameLabelPositions(camera) {
+    for (const id in remotePlayers) {
+        const remotePlayer = remotePlayers[id];
+        if (remotePlayer && remotePlayer.visible && remotePlayer.userData.usernameLabel) {
+            // Get the label
+            const label = remotePlayer.userData.usernameLabel;
+            
+            // Make it face the camera
+            const labelWorldPos = new THREE.Vector3();
+            label.getWorldPosition(labelWorldPos);
+            
+            // Calculate direction from label to camera
+            const dirToCamera = new THREE.Vector3().subVectors(camera.position, labelWorldPos).normalize();
+            
+            // Set the label's world quaternion to face the camera
+            // This is handled automatically by THREE.Sprite - they always face the camera
+        }
+    }
 }
 
 // function to respawn the local player
@@ -166,7 +258,8 @@ export function showAndRespawnRemotePlayer(id, data, scene) {
         addOrUpdateRemotePlayer(scene, id, {
             position: position,
             rotation: { x: 0, y: 0, z: 0 }, // Initial rotation upon respawn
-            shipType: shipType || 'default' // Use received shipType
+            shipType: shipType || 'default', // Use received shipType
+            username: data.username // Pass username if available
         });
         remotePlayer = remotePlayers[id]; // Re-fetch the reference
         if (!remotePlayer) {

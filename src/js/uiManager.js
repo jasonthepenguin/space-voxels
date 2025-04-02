@@ -36,6 +36,7 @@ class UIManager {
         this.mobileControlsElement = document.getElementById('mobile-controls');
         this.deathScreenElement = document.getElementById('death-screen');
         this.killsCounterElement = document.getElementById('kills-counter');
+        this.leaderboardElement = document.getElementById('leaderboard-container');
         
         // Buttons
         this.startButton = document.getElementById('start-button');
@@ -140,6 +141,7 @@ class UIManager {
         if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
         if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
         if (this.deathScreenElement) this.deathScreenElement.style.display = 'none';
+        if (this.leaderboardElement) this.leaderboardElement.style.display = 'none';
         if (!this.isMobile) hideChat(); // Hide chat by default
         
         // Handle UI changes based on state transition
@@ -192,6 +194,7 @@ class UIManager {
                 this.crosshairElement.style.display = 'block';
                 this.playersCounterElement.style.display = 'block';
                 this.killsCounterElement.style.display = 'block';
+                if (this.leaderboardElement) this.leaderboardElement.style.display = 'block';
                 if (this.resumeOverlayElement) {
                     this.resumeOverlayElement.style.display = 'none';
                 }
@@ -227,6 +230,7 @@ class UIManager {
                 this.playersCounterElement.style.display = 'none';
                 if (this.resumeOverlayElement) this.resumeOverlayElement.style.display = 'none';
                 if (this.mobileControlsElement) this.mobileControlsElement.style.display = 'none';
+                if (this.leaderboardElement) this.leaderboardElement.style.display = 'block';
                 if (!this.isMobile) hideChat();
                 if (this.deathScreenElement) this.deathScreenElement.style.display = 'flex';
                 

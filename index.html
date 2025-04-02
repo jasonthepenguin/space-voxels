@@ -9,10 +9,12 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  
   <!-- Username Input Screen -->
   <div id="username-input-screen">
+    <div class="diagonal-banner">Only good Vibe Koded game!</div>
     <div class="game-branding">
-      <h1>🌀 Space Voxels</h1>
+      <h1>🌀 Space Voxels 🌀</h1>
     </div>
     
     <input type="text" id="username-input" placeholder="Username (max 10 chars)" maxlength="10">
@@ -20,7 +22,7 @@
     <button id="username-submit-button">Confirm</button>
     <p class="input-rules">Alphanumeric only, no spaces.</p>
     <div class="creator-info">
-      <p>Created with ❤️ by</p>
+      <p>Created and vibe koded with ❤️ by</p>
       <a href="https://x.com/JasonBotterill3" target="_blank" rel="noopener noreferrer">
         <img src="./src/assets/textures/JB.jpg" alt="Creator Profile Picture" class="creator-pfp">
         <span>Jason Botterill</span>
@@ -68,19 +70,19 @@
       <div class="ship-option" data-tier="premium" data-price="30.00">
         <img src="./src/assets/textures/flowers.png" alt="Flowers Ship">
         <span>Flowers Ship</span>
-        <div class="price-tag">$30.00</div>
+        <div class="price-tag">FREE</div>
       </div>
       
       <div class="ship-option" data-tier="standard" data-price="9.99">
         <img src="./src/assets/textures/angel.png" alt="Angel Ship">
         <span>Angel Ship</span>
-        <div class="price-tag">$9.99</div>
+        <div class="price-tag">FREE</div>
       </div>
       
       <div class="ship-option" data-tier="standard" data-price="9.99">
         <img src="./src/assets/textures/chris.png" alt="Chris Ship">
         <span>Chris Ship</span>
-        <div class="price-tag">$9.99</div>
+        <div class="price-tag">FREE</div>
       </div>
     </div>
     
@@ -95,6 +97,17 @@
     <div id="kills-counter">Kills: 0</div>
   </div>
 
+  <!-- Leaderboard UI -->
+  <div id="leaderboard-container">
+    <div class="leaderboard-header">
+      <h3>Top Players</h3>
+    </div>
+    <div class="leaderboard-body">
+      <ul id="leaderboard-list">
+        <!-- Players will be added here dynamically -->
+      </ul>
+    </div>
+  </div>
   
   <!-- Chat UI for desktop -->
   <div id="chat-container">

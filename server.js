@@ -22,6 +22,13 @@ const LASER_COOLDOWN_MS = 300; // Match client side laser cooldown
 
 const positionTimestamps = new Map(); // socket.id => timestamp
 
+// New rate limiting for respawn and voxel destruction
+const respawnTimestamps = new Map(); // socket.id => timestamp
+const RESPAWN_COOLDOWN_MS = 3000; // 3 seconds between respawns
+
+const voxelDestructionTimestamps = new Map(); // socket.id => timestamp
+const VOXEL_DESTRUCTION_COOLDOWN_MS = 100; // 100ms between voxel destructions
+
 // --- Input Validation Constants ---
 // Max squared distance player can move per tick (3 units at 50ms interval => 60 units/s, client max is 45 units/s)
 const MAX_DISTANCE_PER_TICK_SQ = 9;
@@ -143,6 +150,25 @@ function serializeDestroyedVoxels(map) {
     return obj;
 }
 
+// *** NEW: Leaderboard Update Function ***
+function broadcastLeaderboard() {
+  if (getPlayerCount() === 0) return; // Skip if no players
+  
+  // Convert players object to array with id, username, and kills
+  const leaderboardData = Object.entries(gameState.players)
+    .map(([id, player]) => ({
+      id,
+      username: player.username || `Player_${id.substring(0, 5)}`, // Use username if set, otherwise generate one
+      kills: player.kills || 0
+    }))
+    .sort((a, b) => b.kills - a.kills); // Sort by kills (descending)
+  
+  // Broadcast the leaderboard to all players
+  io.to(GLOBAL_ROOM).emit('leaderboardUpdate', leaderboardData);
+  
+  console.log('Broadcasting leaderboard update with', leaderboardData.length, 'players');
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
 
@@ -216,6 +242,12 @@ io.on('connection', (socket) => {
             console.warn(`Player ${socket.id} requested invalid shipType "${requestedShipType}", using default.`);
           }
         }
+        
+        // NEW: Store username if provided
+        if (data?.username && isValidUsername(data.username)) {
+          gameState.players[socket.id].username = data.username;
+          console.log(`Player ${socket.id} username set to ${data.username}`);
+        }
 
         gameState.players[socket.id].isDead = false; // Ensure not dead on ready
 
@@ -227,86 +259,34 @@ io.on('connection', (socket) => {
           id: socket.id,
           position: gameState.players[socket.id].position,
           rotation: gameState.players[socket.id].rotation,
-          shipType: gameState.players[socket.id].shipType // Send the validated/default ship type
+          shipType: gameState.players[socket.id].shipType, // Send the validated/default ship type
+          username: gameState.players[socket.id].username // Include username in broadcast
         });
 
         console.log(`Player ${socket.id} is ready with ship type: ${gameState.players[socket.id].shipType}`);
+        
+        // Update the leaderboard after a player becomes ready
+        broadcastLeaderboard();
       }
     } catch (error) {
       console.error(`Error in playerReady: ${error.message}`);
     }
   });
 
-  socket.on('playerDied', (data) => {
-    try {
-      const killerId = socket.id;
-      
-      // --- Sanity Checks ---
-      // 1. Validate targetId type and existence
-      if (!data || typeof data.targetId !== 'string' || data.targetId === '') {
-        console.warn(`Invalid targetId received from ${killerId}:`, data);
-        return; 
-      }
-      const targetId = data.targetId;
-
-      // 4. Prevent self-kill reports via this event
-      if (killerId === targetId) {
-        console.warn(`Player ${killerId} attempted to report self-kill via playerDied event.`);
-        return;
-      }
-
-      // 2. Validate Killer State
-      const killer = gameState.players[killerId];
-      if (!killer || !killer.isReady || killer.isDead) {
-        console.warn(`Invalid killer state for ${killerId} reporting kill on ${targetId}. Ready: ${killer?.isReady}, Dead: ${killer?.isDead}`);
-        return;
-      }
-
-      // Get target player state AFTER basic checks
-      const target = gameState.players[targetId];
-
-      // 1. (Continued) & 3. Validate Target State (Exists, Ready, Not Already Dead)
-      if (!target || !target.isReady || target.isDead) {
-        console.log(`Invalid target ${targetId} or target state. Exists: ${!!target}, Ready: ${target?.isReady}, Dead: ${target?.isDead}`);
-        return; 
-      }
-      // --- End Sanity Checks ---
-
-      console.log(`Processing valid playerDied event from ${killerId} targeting ${targetId}`);
-
-      // Mark the target player as dead (passed all checks)
-      target.isDead = true;
-      
-      // Increment killer's kill count
-      killer.kills += 1;
-      
-      // Find the target's socket
-      const targetSocket = io.sockets.sockets.get(targetId);
-      
-      if (targetSocket) {
-        // Notify ONLY the target player that they died
-        targetSocket.emit('playerDied', { finalKills: target.kills }); // Send final kill count
-        console.log(`Sent 'playerDied' event to target ${targetId}`);
-      } else {
-        console.log(`Target player ${targetId} socket not found, but marked as dead.`);
-      }
-
-      io.to(GLOBAL_ROOM).emit('playerHit', { targetId: targetId });
-      console.log(`Broadcasted 'playerHit' for target ${targetId} to all clients.`);
-
-      // Optional: Broadcast elimination info to everyone (for kill feeds etc.)
-      // io.to(GLOBAL_ROOM).emit('playerEliminated', { killerId: killerId, victimId: targetId });
-
-    } catch (error) {
-      console.error(`Error in playerDied handler: ${error.message}`, error.stack);
-    }
-  });
-
-   // NEW: Handle respawn requests
-   socket.on('requestRespawn', () => {
+  // Handle respawn requests
+  socket.on('requestRespawn', () => {
     try {
       const playerId = socket.id;
       console.log(`Received requestRespawn from ${playerId}`);
+
+      // Apply rate limiting
+      const now = Date.now();
+      const lastRespawn = respawnTimestamps.get(playerId) || 0;
+      if (now - lastRespawn < RESPAWN_COOLDOWN_MS) {
+        console.log(`Respawn rate limit hit for ${playerId}, ignoring request`);
+        return; // Ignore the request
+      }
+      respawnTimestamps.set(playerId, now);
 
       // Validate player exists and is actually dead
       if (gameState.players[playerId] && gameState.players[playerId].isDead) {
@@ -325,6 +305,9 @@ io.on('connection', (socket) => {
         gameState.players[playerId].rotation = respawnRotation;
         gameState.players[playerId].kills = 0; // Reset kill count on respawn
         
+        // Broadcast updated leaderboard after kill count reset
+        broadcastLeaderboard();
+
         // Send respawn confirmation and position ONLY to the requesting player
         socket.emit('localPlayerRespawn', { 
           position: respawnPosition,
@@ -337,7 +320,8 @@ io.on('connection', (socket) => {
         socket.to(GLOBAL_ROOM).emit('playerRespawned', {
           id: playerId,
           position: respawnPosition,
-          shipType: gameState.players[playerId].shipType
+          shipType: gameState.players[playerId].shipType,
+          username: gameState.players[playerId].username // Include username in respawn event
           // at the moment rotation is implicity reset to 0,0,0 on client
         });
         console.log(`Broadcasted respawn/move for ${playerId} to others.`);
@@ -426,7 +410,8 @@ io.on('connection', (socket) => {
           socket.to(GLOBAL_ROOM).volatile.emit('playerMoved', {
               id: socket.id,
               position: data.position,
-              rotation: data.rotation
+              rotation: data.rotation,
+              username: player.username // Include username in position updates
           });
         }
     }
@@ -435,6 +420,15 @@ io.on('connection', (socket) => {
   // Handle voxel destruction - REVISED
   socket.on('destroyVoxel', (data) => {
     try {
+      // Apply rate limiting
+      const now = Date.now();
+      const lastDestruction = voxelDestructionTimestamps.get(socket.id) || 0;
+      if (now - lastDestruction < VOXEL_DESTRUCTION_COOLDOWN_MS) {
+        // console.log(`Voxel destruction rate limit hit for ${socket.id}`); // Uncomment for debugging
+        return; // Ignore the request
+      }
+      voxelDestructionTimestamps.set(socket.id, now);
+
       // Basic Validation
       if (!data || typeof data.bodyId !== 'string' || typeof data.instanceId !== 'number' || data.instanceId < 0 || !Number.isInteger(data.instanceId)) {
         console.warn(`Invalid destroyVoxel data from ${socket.id}:`, data);
@@ -694,6 +688,8 @@ io.on('connection', (socket) => {
       chatCooldowns.delete(disconnectedId);
       positionTimestamps.delete(disconnectedId);
       laserTimestamps.delete(disconnectedId);
+      respawnTimestamps.delete(disconnectedId); // Clean up respawn timestamps
+      voxelDestructionTimestamps.delete(disconnectedId); // Clean up voxel destruction timestamps
 
       if (gameState.players[disconnectedId]) {
         delete gameState.players[disconnectedId];
@@ -717,6 +713,9 @@ setInterval(() => {
   if (getPlayerCount() > 0) {
     io.emit('serverTime', { timestamp: Date.now() });
     console.log('Broadcasting server time update.');
+    
+    // Also broadcast leaderboard update on the same interval
+    broadcastLeaderboard();
   } else {
     console.log('Skipping server time update, no players connected.');
   }

@@ -71,7 +71,9 @@ import {
     requestRespawn,
     isPlayerDead,
     updateKillCountUI,
-    resetKillCount
+    resetKillCount,
+    setLocalPlayerUsername,
+    updateLocalPlayerKillsInLeaderboard
 } from './networking.js';
 
 import {
@@ -86,7 +88,8 @@ import {
     removeRemotePlayer,
     getAllRemotePlayers,
     hideRemotePlayerTemporarily,
-    showAndRespawnRemotePlayer
+    showAndRespawnRemotePlayer,
+    updateUsernameLabelPositions
 } from './remotePlayers.js';
 
 // Import textures and sounds using ES modules
@@ -241,6 +244,9 @@ function init() {
     flashPool = weaponSystems.flashPool;
     raycaster = weaponSystems.raycaster;
 
+    // Initialize audio system early
+    audioSystem = initAudioSystem();
+
     // Create sun
     sun = createSun(scene, voxelGeometry);
 
@@ -368,9 +374,6 @@ function init() {
     
     // Start animation loop
     animate();
-    
-    // Initialize audio system instead of preloading sounds
-    audioSystem = initAudioSystem();
     
     console.log("Game initialized successfully");
     console.log("Mobile device detected:", isMobile);
@@ -533,6 +536,9 @@ function animate() {
             );
         }
     }
+    
+    // Update username labels to face the camera
+    updateUsernameLabelPositions(camera);
 
     updatePlanets(planets, delta);
     updateLasers(lasers, delta);
@@ -599,6 +605,9 @@ async function startGame(username) {
     // Reset kill counter at game start
     resetKillCount();
     updateKillCountUI(0);
+    
+    // Set the local player's username for leaderboard
+    setLocalPlayerUsername(username);
     
     // Resume audio context on user interaction
     resumeAudioContext();
@@ -689,6 +698,12 @@ function resetGame() {
     });
     lasers = [];
     
+    // Clear leaderboard display
+    const leaderboardList = document.getElementById('leaderboard-list');
+    if (leaderboardList) {
+        leaderboardList.innerHTML = '';
+    }
+    
     // Hide mobile controls if on mobile, otherwise hide chat for desktop
     if (isMobile) {
         hideMobileControls();
@@ -737,22 +752,5 @@ function updateFOV(delta, boostActive) {
 function resumeAudioContext() {
     if (audioSystem && audioSystem.audioContext.state === 'suspended') {
         audioSystem.audioContext.resume();
-    }
-}
-
-// Helper function to load game sounds
-function loadGameSounds() {
-    if (audioSystem) {
-        Promise.all([
-            audioSystem.loadSound('laser', laserSoundUrl),
-            audioSystem.loadSound('thruster', thrusterSoundUrl),
-            audioSystem.loadSound('search', searchSoundUrl),
-            audioSystem.loadSound('holy_shit', holyShitSoundUrl),
-            audioSystem.loadSound('game_over', gameOverSoundUrl)
-        ]).then(() => {
-            console.log("All game sounds loaded successfully");
-        }).catch(error => {
-            console.error("Error loading game sounds:", error);
-        });
     }
 }
