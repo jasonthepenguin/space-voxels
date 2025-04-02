@@ -252,7 +252,8 @@ io.on('connection', (socket) => {
           id: socket.id,
           position: gameState.players[socket.id].position,
           rotation: gameState.players[socket.id].rotation,
-          shipType: gameState.players[socket.id].shipType // Send the validated/default ship type
+          shipType: gameState.players[socket.id].shipType, // Send the validated/default ship type
+          username: gameState.players[socket.id].username // Include username in broadcast
         });
 
         console.log(`Player ${socket.id} is ready with ship type: ${gameState.players[socket.id].shipType}`);
@@ -371,7 +372,8 @@ io.on('connection', (socket) => {
         socket.to(GLOBAL_ROOM).emit('playerRespawned', {
           id: playerId,
           position: respawnPosition,
-          shipType: gameState.players[playerId].shipType
+          shipType: gameState.players[playerId].shipType,
+          username: gameState.players[playerId].username // Include username in respawn event
           // at the moment rotation is implicity reset to 0,0,0 on client
         });
         console.log(`Broadcasted respawn/move for ${playerId} to others.`);
@@ -460,7 +462,8 @@ io.on('connection', (socket) => {
           socket.to(GLOBAL_ROOM).volatile.emit('playerMoved', {
               id: socket.id,
               position: data.position,
-              rotation: data.rotation
+              rotation: data.rotation,
+              username: player.username // Include username in position updates
           });
         }
     }

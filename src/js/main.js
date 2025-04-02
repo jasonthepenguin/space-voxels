@@ -88,7 +88,8 @@ import {
     removeRemotePlayer,
     getAllRemotePlayers,
     hideRemotePlayerTemporarily,
-    showAndRespawnRemotePlayer
+    showAndRespawnRemotePlayer,
+    updateUsernameLabelPositions
 } from './remotePlayers.js';
 
 // Import textures and sounds using ES modules
@@ -535,6 +536,9 @@ function animate() {
             );
         }
     }
+    
+    // Update username labels to face the camera
+    updateUsernameLabelPositions(camera);
 
     updatePlanets(planets, delta);
     updateLasers(lasers, delta);

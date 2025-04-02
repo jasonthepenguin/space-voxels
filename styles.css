@@ -1601,3 +1601,18 @@ canvas {
     font-size: 14px;
   }
 }
+
+/* Add player username label styles */
+.player-username {
+  position: absolute;
+  color: white;
+  font-family: 'Exo 2', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+}
