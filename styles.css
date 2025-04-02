@@ -51,6 +51,12 @@ canvas {
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   animation: glow 3s infinite alternate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Adjust vertical alignment as needed */
+  padding: 25px;
+  
 }
 
 #username-input-screen h1 {
@@ -64,7 +70,7 @@ canvas {
 #username-input {
   width: 80%;
   padding: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 5px;
   background-color: rgba(0, 0, 0, 0.3);
@@ -88,7 +94,7 @@ canvas {
   color: #ff6b6b; /* Light red for error messages */
   font-size: 14px;
   min-height: 20px; /* Reserve space for the error message */
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   font-weight: bold;
 }
 
@@ -101,7 +107,7 @@ canvas {
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
-  margin: 10px 0;
+  margin: 5px 0;
   cursor: pointer;
   border-radius: 30px;
   transition: all 0.3s;
