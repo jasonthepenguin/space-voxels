@@ -18,7 +18,7 @@ function createUsernameLabel(username) {
     context.clearRect(0, 0, canvas.width, canvas.height);
     
     // Set text styles
-    context.font = 'Bold 58px Arial';
+    context.font = 'Bold 70px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     

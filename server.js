@@ -22,6 +22,13 @@ const LASER_COOLDOWN_MS = 300; // Match client side laser cooldown
 
 const positionTimestamps = new Map(); // socket.id => timestamp
 
+// New rate limiting for respawn and voxel destruction
+const respawnTimestamps = new Map(); // socket.id => timestamp
+const RESPAWN_COOLDOWN_MS = 3000; // 3 seconds between respawns
+
+const voxelDestructionTimestamps = new Map(); // socket.id => timestamp
+const VOXEL_DESTRUCTION_COOLDOWN_MS = 100; // 100ms between voxel destructions
+
 // --- Input Validation Constants ---
 // Max squared distance player can move per tick (3 units at 50ms interval => 60 units/s, client max is 45 units/s)
 const MAX_DISTANCE_PER_TICK_SQ = 9;
@@ -340,6 +347,15 @@ io.on('connection', (socket) => {
       const playerId = socket.id;
       console.log(`Received requestRespawn from ${playerId}`);
 
+      // Apply rate limiting
+      const now = Date.now();
+      const lastRespawn = respawnTimestamps.get(playerId) || 0;
+      if (now - lastRespawn < RESPAWN_COOLDOWN_MS) {
+        console.log(`Respawn rate limit hit for ${playerId}, ignoring request`);
+        return; // Ignore the request
+      }
+      respawnTimestamps.set(playerId, now);
+
       // Validate player exists and is actually dead
       if (gameState.players[playerId] && gameState.players[playerId].isDead) {
         
@@ -472,6 +488,15 @@ io.on('connection', (socket) => {
   // Handle voxel destruction - REVISED
   socket.on('destroyVoxel', (data) => {
     try {
+      // Apply rate limiting
+      const now = Date.now();
+      const lastDestruction = voxelDestructionTimestamps.get(socket.id) || 0;
+      if (now - lastDestruction < VOXEL_DESTRUCTION_COOLDOWN_MS) {
+        // console.log(`Voxel destruction rate limit hit for ${socket.id}`); // Uncomment for debugging
+        return; // Ignore the request
+      }
+      voxelDestructionTimestamps.set(socket.id, now);
+
       // Basic Validation
       if (!data || typeof data.bodyId !== 'string' || typeof data.instanceId !== 'number' || data.instanceId < 0 || !Number.isInteger(data.instanceId)) {
         console.warn(`Invalid destroyVoxel data from ${socket.id}:`, data);
@@ -731,6 +756,8 @@ io.on('connection', (socket) => {
       chatCooldowns.delete(disconnectedId);
       positionTimestamps.delete(disconnectedId);
       laserTimestamps.delete(disconnectedId);
+      respawnTimestamps.delete(disconnectedId); // Clean up respawn timestamps
+      voxelDestructionTimestamps.delete(disconnectedId); // Clean up voxel destruction timestamps
 
       if (gameState.players[disconnectedId]) {
         delete gameState.players[disconnectedId];
