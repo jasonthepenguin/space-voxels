@@ -385,6 +385,24 @@ function init() {
 
     // Make UI Manager accessible globally for other modules
     window.uiManager = uiManager;
+
+    // *** NEW: Listen for IP connection warning ***
+    socket.on('ipLimitWarning', (data) => {
+        // Show the modal
+        const modal = document.getElementById('ip-limit-modal');
+        const msg = document.getElementById('ip-limit-message');
+        const closeBtn = document.getElementById('ip-limit-close-btn');
+        if (modal && msg && closeBtn) {
+            msg.textContent = data.message;
+            modal.style.display = 'flex';
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+        } else {
+            // fallback
+            alert(data.message);
+        }
+    });
 }
 
 // Update player count in UI

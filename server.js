@@ -44,6 +44,8 @@ const PLAYER_HITBOX_RADIUS_SQ = PLAYER_HITBOX_RADIUS * PLAYER_HITBOX_RADIUS;
 
 const VALID_SHIP_TYPES = ['Flowers Ship', 'Angel Ship', 'Chris Ship', 'default'];
 
+const ipConnectionCounts = new Map();
+const MAX_CONNECTIONS_PER_IP = 2;
 
 // Setup CORS
 app.use(cors({
@@ -171,6 +173,19 @@ function broadcastLeaderboard() {
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
+
+  // --- IP Connection Limiting ---
+  const ip = socket.handshake.address;
+  const count = ipConnectionCounts.get(ip) || 0;
+  if (count >= MAX_CONNECTIONS_PER_IP) {
+    socket.emit('ipLimitWarning', { 
+      message: `You have reached the maximum of ${MAX_CONNECTIONS_PER_IP} connections from your IP address. Please close other tabs or devices to continue playing.` 
+    });
+    socket.disconnect(true);
+    return;
+  }
+  ipConnectionCounts.set(ip, count + 1);
+  // --- End IP Connection Limiting ---
 
   if(getPlayerCount() >= MAX_PLAYERS)
   {
@@ -696,6 +711,14 @@ io.on('connection', (socket) => {
         io.to(GLOBAL_ROOM).emit('playerLeft', { id: disconnectedId });
         broadcastPlayerCount();
       }
+
+      // --- IP Connection Limiting Cleanup ---
+      const ip = socket.handshake.address;
+      const count = ipConnectionCounts.get(ip) || 1;
+      if (count <= 1) ipConnectionCounts.delete(ip);
+      else ipConnectionCounts.set(ip, count - 1);
+      // --- End IP Connection Limiting Cleanup ---
+
     } catch (error) {
       console.error(`Error handling disconnect: ${error.message}`);
     }
