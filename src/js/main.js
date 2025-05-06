@@ -651,11 +651,6 @@ async function startGame(username) {
     // Set player reference in networking module
     setPlayerReference(player, updateCameraPosition);
     
-    // *** NEW: Play spawn sound on initial start ***
-    if (audioSystem && audioSystem.isAudioInitialized) {
-        audioSystem.playSound('search', { volume: 0.7 }); 
-    }
-
     // Show mobile controls if on mobile, otherwise show chat for desktop
     if (isMobile) {
         showMobileControls();
