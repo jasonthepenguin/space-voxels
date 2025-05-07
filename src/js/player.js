@@ -39,6 +39,16 @@ export function createPlayer(scene, shipType = 'default', initialPosition = null
     // Store the ship type on the player object for reference
     player.userData.shipType = shipType;
     
+    // *** NEW: Common thruster material ***
+    const thrusterMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00aaff, // Bright blue
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    player.userData.thrusterMaterial = thrusterMaterial; // Store for potential dynamic changes
+
     // Create the selected ship type
     switch(shipType) {
         case 'Flowers Ship':
@@ -109,6 +119,15 @@ function createDefaultShip(player) {
     rightEngine.position.set(0.8, -0.1, 1.8);
     player.add(rightEngine);
     
+    // *** NEW: Thruster effect for Default Ship ***
+    const thrusterGeometry = new THREE.ConeGeometry(0.4, 2.5, 8); // Radius, height, segments
+    const thruster = new THREE.Mesh(thrusterGeometry, player.userData.thrusterMaterial);
+    thruster.position.set(0, -0.1, 2.8); // Positioned behind the engines
+    thruster.rotation.x = Math.PI / 2; // Point cone backwards
+    thruster.visible = false;
+    player.add(thruster);
+    player.userData.thruster = thruster;
+
     // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
     const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
     const gun = new THREE.Mesh(gunGeometry, accentMaterial);
@@ -275,6 +294,16 @@ function createFlowersShip(player) {
     rightEngine.position.set(4.2, 0.4, 2.5);
     player.add(rightEngine);
     
+    // *** NEW: Thruster effect for Flowers Ship ***
+    // Central thruster behind body
+    const thrusterGeometry = new THREE.ConeGeometry(0.3, 2.0, 8);
+    const centerThruster = new THREE.Mesh(thrusterGeometry, player.userData.thrusterMaterial);
+    centerThruster.position.set(0, 0, 4.0); // Behind the central engine nozzles
+    centerThruster.rotation.x = Math.PI / 2;
+    centerThruster.visible = false;
+    player.add(centerThruster);
+    player.userData.thruster = centerThruster; // Main thruster reference
+
     // Forward gun/cannon - CONSISTENT ACROSS ALL SHIPS
     const gunGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
     const gun = new THREE.Mesh(gunGeometry, accentMaterial);
@@ -397,6 +426,15 @@ function createAngelShip(player) {
     const exhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
     exhaust.position.set(0, -0.2, 3.0);
     player.add(exhaust);
+
+    // *** NEW: Thruster effect for Angel Ship ***
+    const thrusterGeometry = new THREE.ConeGeometry(0.35, 2.8, 8);
+    const thruster = new THREE.Mesh(thrusterGeometry, player.userData.thrusterMaterial);
+    thruster.position.set(0, -0.2, 3.5); // Behind the exhaust glow
+    thruster.rotation.x = Math.PI / 2;
+    thruster.visible = false;
+    player.add(thruster);
+    player.userData.thruster = thruster;
 
     // Forward gun (unchanged)
     const gunGeometry = new THREE.BoxGeometry(0.3, 0.3, 1.8);
@@ -535,6 +573,27 @@ function createChrisShip(player) {
     bottomRightEngine.position.set(stripeOffsetX, -0.3, engineOffsetZ);
     bottomRightEngine.rotation.z = wingAngle;
     player.add(bottomRightEngine);
+
+    // *** NEW: Thruster effects for Chris Ship (one for each engine) ***
+    const thrusterConeGeometry = new THREE.ConeGeometry(engineRadius * 0.8, 2.0, 6);
+    const thrusters = [];
+
+    const createThruster = (x, y, zRot) => {
+        const thruster = new THREE.Mesh(thrusterConeGeometry, player.userData.thrusterMaterial);
+        thruster.position.set(x, y, engineOffsetZ + engineLength / 2 + 0.5); // Position behind engine
+        thruster.rotation.z = zRot;
+        thruster.rotation.x = Math.PI / 2; // Point cone backwards
+        thruster.visible = false;
+        player.add(thruster);
+        thrusters.push(thruster);
+    };
+
+    createThruster(-stripeOffsetX, 0.3, wingAngle);      // Top-Left
+    createThruster(stripeOffsetX, 0.3, -wingAngle);     // Top-Right
+    createThruster(-stripeOffsetX, -0.3, -wingAngle);    // Bottom-Left
+    createThruster(stripeOffsetX, -0.3, wingAngle);     // Bottom-Right
+    
+    player.userData.thrusters = thrusters; // Note: plural 'thrusters' for this ship
 
     // Wingtip Cannons (Simplified as boxes)
     const cannonLength = 1.0;
@@ -679,6 +738,30 @@ export function handleMovement(player, delta, updateCameraPosition, controls = n
     player.rotation.y += targetYawChange;
     player.rotation.x += targetPitchChange;
     player.rotation.z += targetRollChange;
+    
+    // *** NEW: Handle thruster visibility and animation ***
+    if (player.userData.thruster) { // For ships with a single thruster
+        if (boostActive) {
+            player.userData.thruster.visible = true;
+            // Simple pulse animation for the thruster
+            const pulse = 1 + Math.sin(performance.now() * 0.03) * 0.25; // Faster pulsation
+            player.userData.thruster.scale.set(pulse, pulse, 1 + Math.sin(performance.now() * 0.05) * 0.3);
+            player.userData.thruster.material.opacity = 0.5 + Math.sin(performance.now() * 0.04) * 0.2;
+        } else {
+            player.userData.thruster.visible = false;
+        }
+    } else if (player.userData.thrusters && Array.isArray(player.userData.thrusters)) { // For ships with multiple thrusters (e.g., Chris Ship)
+        player.userData.thrusters.forEach(thruster => {
+            if (boostActive) {
+                thruster.visible = true;
+                const pulse = 1 + Math.sin(performance.now() * 0.03 + thruster.id * 0.5) * 0.25; // Offset animation per thruster
+                thruster.scale.set(pulse, pulse, 1 + Math.sin(performance.now() * 0.05 + thruster.id * 0.5) * 0.3);
+                thruster.material.opacity = 0.5 + Math.sin(performance.now() * 0.04 + thruster.id * 0.5) * 0.2;
+            } else {
+                thruster.visible = false;
+            }
+        });
+    }
     
     // *** NEW: Update boost state for next frame ***
     wasBoostingLastFrame = boostActive; 
