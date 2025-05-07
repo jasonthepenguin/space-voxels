@@ -208,6 +208,25 @@ export function initNetworking(updatePlayerCount, gameScene, sun, planets) {
         }
     });
 
+    socket.on('kicked', (data) => {
+      alert(`You have been kicked from the server: ${data.reason || 'No reason specified.'}`);
+      // Reset UI and potentially reload or go to main menu
+      if (window.uiManager && typeof window.uiManager.changeState === 'function' && window.GameState) {
+        // Attempt to go to a safe state like USERNAME_INPUT or MAIN_MENU
+        // In this case, USERNAME_INPUT might be better to force re-entry.
+        window.uiManager.changeState(window.GameState.USERNAME_INPUT);
+        if (socket && socket.connected) { // Use the 'socket' variable from the outer scope
+            socket.disconnect(true); // Ensure client socket is closed and 'disconnect' fires
+        }
+      } else {
+        // Fallback if UI manager is not available
+        if (socket && socket.connected) {
+            socket.disconnect(true);
+        }
+        window.location.reload();
+      }
+    });
+
     setInterval(() => {
         if (socket && socket.connected) {
         } else {
