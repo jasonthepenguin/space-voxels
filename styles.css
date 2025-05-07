@@ -1643,3 +1643,52 @@ canvas {
   transform-origin: top left;
   transform: rotate(-45deg);
 }
+
+#ip-limit-modal {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.85);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#ip-limit-modal-content {
+  background: linear-gradient(135deg, #23233C 0%, #0B0B1A 100%);
+  color: #fff;
+  padding: 40px 30px 30px 30px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 0 40px #000;
+  min-width: 300px;
+  max-width: 90vw;
+}
+
+#ip-limit-modal h2 {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 2em;
+  color: #ff6b6b;
+}
+
+#ip-limit-message {
+  font-size: 1.1em;
+  margin-bottom: 24px;
+}
+
+#ip-limit-close-btn {
+  background: linear-gradient(to bottom, #4CAF50, #2E7D32);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 32px;
+  font-size: 1em;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+#ip-limit-close-btn:hover {
+  background: linear-gradient(to bottom, #5DBF61, #3E8D42);
+}

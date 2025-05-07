@@ -385,6 +385,24 @@ function init() {
 
     // Make UI Manager accessible globally for other modules
     window.uiManager = uiManager;
+
+    // *** NEW: Listen for IP connection warning ***
+    socket.on('ipLimitWarning', (data) => {
+        // Show the modal
+        const modal = document.getElementById('ip-limit-modal');
+        const msg = document.getElementById('ip-limit-message');
+        const closeBtn = document.getElementById('ip-limit-close-btn');
+        if (modal && msg && closeBtn) {
+            msg.textContent = data.message;
+            modal.style.display = 'flex';
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+        } else {
+            // fallback
+            alert(data.message);
+        }
+    });
 }
 
 // Update player count in UI
@@ -651,11 +669,6 @@ async function startGame(username) {
     // Set player reference in networking module
     setPlayerReference(player, updateCameraPosition);
     
-    // *** NEW: Play spawn sound on initial start ***
-    if (audioSystem && audioSystem.isAudioInitialized) {
-        audioSystem.playSound('search', { volume: 0.7 }); 
-    }
-
     // Show mobile controls if on mobile, otherwise show chat for desktop
     if (isMobile) {
         showMobileControls();
