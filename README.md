@@ -5,6 +5,7 @@ A multiplayer browser game where you pilot voxel spaceships, battle other player
 
 **Play it live:** [https://spacevoxel.io](https://spacevoxel.io)
 
+[![Watch the gameplay video](https://img.youtube.com/vi/ANkDChTqE48/0.jpg)](https://www.youtube.com/watch?v=ANkDChTqE48)
 ---
 
 ## 🚀 Features
