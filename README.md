@@ -1,5 +1,5 @@
 
-# 🌀 Space Voxels
+# Space Voxels
 
 A multiplayer browser game where you pilot voxel spaceships, battle other players, and destroy planets in a vibrant, solar-system arena. Built with [Three.js](https://threejs.org/), [Vite](https://vitejs.dev/), and [Socket.io](https://socket.io/).
 
@@ -12,7 +12,7 @@ A multiplayer browser game where you pilot voxel spaceships, battle other player
 [![Watch the gameplay video](https://img.youtube.com/vi/ANkDChTqE48/0.jpg)](https://www.youtube.com/watch?v=ANkDChTqE48)
 ---
 
-## 🚀 Features
+## Features
 
 - **Real-time Multiplayer:** Battle with up to 50 players per server.
 - **Voxel Destruction:** Shoot and destroy planets, moons, and Saturn’s rings.
@@ -25,13 +25,13 @@ A multiplayer browser game where you pilot voxel spaceships, battle other player
 
 ---
 
-## 🖥️ Screenshots
+## Screenshots
 
 *(Add screenshots here if you have them!)*
 
 ---
 
-## 🛠️ Getting Started (Local Development)
+## Getting Started (Local Development)
 
 ### Prerequisites
 
@@ -73,7 +73,7 @@ node server.js
 
 ---
 
-## 📦 Build for Production
+## Build for Production
 
 ```bash
 npm run build
@@ -83,7 +83,7 @@ npm run build
 
 ---
 
-## 🌐 Deployment
+## Deployment
 
 - The app is designed for static hosting (frontend) and a Node.js server (backend).
 - See `vercel.json` for Vercel rewrites if deploying there.
@@ -91,7 +91,7 @@ npm run build
 
 ---
 
-## 🎮 Controls
+## Controls
 
 ### Desktop
 
@@ -105,10 +105,3 @@ npm run build
 
 - On-screen joystick and buttons for movement, boost, and shooting.
 
----
-
-## 🙏 Credits
-
-- **Created by:** [Jason Botterill](https://github.com/jasonthepenguin)
-- **Special Thanks:** [@flowersslop](https://twitter.com/flowersslop), [@Angaisb_](https://twitter.com/Angaisb_), [@chatgpt21](https://twitter.com/chatgpt21)
-- **Sound Effects:** See in-game attributions popup for full credits.
